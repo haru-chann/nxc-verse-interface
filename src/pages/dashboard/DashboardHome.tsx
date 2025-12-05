@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { StatCard } from "@/components/ui/StatCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
-import { Eye, Users, MousePointer, TrendingUp, ArrowUpRight, QrCode } from "lucide-react";
+import { Eye, Users, MousePointer, TrendingUp, ArrowUpRight, QrCode, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 
@@ -178,7 +178,8 @@ const DashboardHome = () => {
             {[
               { label: "Edit Profile", path: "/dashboard/profile", icon: Users },
               { label: "Download QR", path: "/dashboard/qr-builder", icon: QrCode },
-              { label: "View Analytics", path: "/dashboard", icon: TrendingUp },
+              { label: "Interaction Log", path: "/dashboard/interactions", icon: Activity },
+              { label: "Manage Contacts", path: "/dashboard/contacts", icon: TrendingUp },
             ].map((action) => (
               <Link
                 key={action.path + action.label}
