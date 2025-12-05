@@ -4,12 +4,31 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { Eye, Users, MousePointer, TrendingUp, ArrowUpRight, QrCode } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 
 const stats = [
   { title: "Profile Views", value: "12,847", change: "+23% from last month", changeType: "positive" as const, icon: Eye },
   { title: "Total Taps", value: "3,291", change: "+18% from last month", changeType: "positive" as const, icon: MousePointer },
   { title: "Contacts Saved", value: "847", change: "+12% from last month", changeType: "positive" as const, icon: Users },
   { title: "Engagement Rate", value: "68%", change: "+5% from last month", changeType: "positive" as const, icon: TrendingUp },
+];
+
+const viewsData = [
+  { name: "Mon", views: 120, taps: 45 },
+  { name: "Tue", views: 180, taps: 62 },
+  { name: "Wed", views: 240, taps: 89 },
+  { name: "Thu", views: 200, taps: 71 },
+  { name: "Fri", views: 320, taps: 112 },
+  { name: "Sat", views: 280, taps: 95 },
+  { name: "Sun", views: 190, taps: 68 },
+];
+
+const locationData = [
+  { city: "San Francisco", visits: 320 },
+  { city: "New York", visits: 280 },
+  { city: "London", visits: 220 },
+  { city: "Tokyo", visits: 180 },
+  { city: "Paris", visits: 120 },
 ];
 
 const recentActivity = [
@@ -54,6 +73,76 @@ const DashboardHome = () => {
         ))}
       </div>
 
+      {/* Charts Row */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Views & Taps Chart */}
+        <GlassCard className="p-6">
+          <h2 className="text-xl font-bold font-display text-foreground mb-6">Views & Taps (This Week)</h2>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={viewsData}>
+                <defs>
+                  <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorTaps" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: "hsl(var(--card))", 
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "12px",
+                    color: "hsl(var(--foreground))"
+                  }} 
+                />
+                <Area type="monotone" dataKey="views" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorViews)" strokeWidth={2} />
+                <Area type="monotone" dataKey="taps" stroke="hsl(var(--accent))" fillOpacity={1} fill="url(#colorTaps)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-primary" />
+              <span className="text-sm text-muted-foreground">Views</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-accent" />
+              <span className="text-sm text-muted-foreground">Taps</span>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Top Locations Chart */}
+        <GlassCard className="p-6">
+          <h2 className="text-xl font-bold font-display text-foreground mb-6">Top Locations</h2>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={locationData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis dataKey="city" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={100} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: "hsl(var(--card))", 
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "12px",
+                    color: "hsl(var(--foreground))"
+                  }} 
+                />
+                <Bar dataKey="visits" fill="hsl(var(--primary))" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </GlassCard>
+      </div>
+
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
         <GlassCard className="lg:col-span-2 p-6">
@@ -89,10 +178,10 @@ const DashboardHome = () => {
             {[
               { label: "Edit Profile", path: "/dashboard/profile", icon: Users },
               { label: "Download QR", path: "/dashboard/qr-builder", icon: QrCode },
-              { label: "View Analytics", path: "/dashboard/interactions", icon: TrendingUp },
+              { label: "View Analytics", path: "/dashboard", icon: TrendingUp },
             ].map((action) => (
               <Link
-                key={action.path}
+                key={action.path + action.label}
                 to={action.path}
                 className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors group"
               >

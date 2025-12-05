@@ -2,14 +2,15 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { Twitter, Linkedin, Instagram, Github, Globe, Mail, Phone, MapPin, Lock, QrCode, ExternalLink } from "lucide-react";
+import { Twitter, Linkedin, Instagram, Github, Globe, MapPin, Lock, QrCode, ExternalLink, Download, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 const socialLinks = [
   { icon: Globe, label: "Website", url: "https://johndoe.com" },
-  { icon: Linkedin, label: "LinkedIn", url: "#" },
-  { icon: Twitter, label: "Twitter", url: "#" },
-  { icon: Github, label: "GitHub", url: "#" },
-  { icon: Instagram, label: "Instagram", url: "#" },
+  { icon: Linkedin, label: "LinkedIn", url: "https://linkedin.com/in/johndoe" },
+  { icon: Twitter, label: "Twitter", url: "https://twitter.com/johndoe" },
+  { icon: Github, label: "GitHub", url: "https://github.com/johndoe" },
+  { icon: Instagram, label: "Instagram", url: "https://instagram.com/johndoe" },
 ];
 
 const portfolioItems = [
@@ -18,9 +19,71 @@ const portfolioItems = [
   { title: "Mobile App UI", category: "Design" },
 ];
 
+const profileData = {
+  firstName: "John",
+  lastName: "Doe",
+  title: "Product Designer",
+  company: "NXC Badge",
+  email: "john@nxcbadge.com",
+  phone: "+1 555 123 4567",
+  location: "San Francisco, CA",
+  website: "https://johndoe.com",
+  bio: "Passionate about creating beautiful digital experiences. 10+ years in product design. Currently building the future of digital identity at NXC Badge."
+};
+
 const PublicProfile = () => {
-  const [showPinDialog, setShowPinDialog] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pin, setPin] = useState("");
+  const [showPinInput, setShowPinInput] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
+
+  const handleSaveContact = () => {
+    // Generate VCard format
+    const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:${profileData.firstName} ${profileData.lastName}
+N:${profileData.lastName};${profileData.firstName};;;
+TITLE:${profileData.title}
+ORG:${profileData.company}
+EMAIL:${profileData.email}
+TEL:${profileData.phone}
+URL:${profileData.website}
+ADR:;;${profileData.location};;;;
+NOTE:${profileData.bio}
+END:VCARD`;
+
+    const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${profileData.firstName}_${profileData.lastName}.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success("Contact saved to your device!");
+  };
+
+  const handleUnlock = () => {
+    if (pin === "1234") {
+      setIsUnlocked(true);
+      setShowPinInput(false);
+      toast.success("Private content unlocked!");
+    } else {
+      toast.error("Incorrect PIN");
+    }
+  };
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactForm.name || !contactForm.email || !contactForm.message) {
+      toast.error("Please fill all fields");
+      return;
+    }
+    toast.success("Message sent successfully!");
+    setContactForm({ name: "", email: "", message: "" });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,12 +115,26 @@ const PublicProfile = () => {
           >
             <span className="text-4xl font-bold text-primary-foreground">JD</span>
           </motion.div>
-          <h1 className="text-3xl font-bold font-display text-foreground mb-1">John Doe</h1>
-          <p className="text-lg text-primary mb-2">Product Designer</p>
+          <h1 className="text-3xl font-bold font-display text-foreground mb-1">{profileData.firstName} {profileData.lastName}</h1>
+          <p className="text-lg text-primary mb-2">{profileData.title}</p>
           <p className="text-muted-foreground flex items-center justify-center gap-2">
             <MapPin className="w-4 h-4" />
-            San Francisco, CA
+            {profileData.location}
           </p>
+        </motion.div>
+
+        {/* Save Contact Button */}
+        <motion.div
+          className="mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <NeonButton className="w-full" onClick={handleSaveContact}>
+            <UserPlus className="w-5 h-5 mr-2" />
+            Save Contact
+            <Download className="w-4 h-4 ml-2" />
+          </NeonButton>
         </motion.div>
 
         {/* Bio */}
@@ -67,10 +144,7 @@ const PublicProfile = () => {
           transition={{ delay: 0.1 }}
         >
           <GlassCard className="p-6 mb-6">
-            <p className="text-foreground text-center">
-              Passionate about creating beautiful digital experiences. 10+ years in product design. 
-              Currently building the future of digital identity at NXC Badge.
-            </p>
+            <p className="text-foreground text-center">{profileData.bio}</p>
           </GlassCard>
         </motion.div>
 
@@ -128,24 +202,30 @@ const PublicProfile = () => {
         >
           <GlassCard className="p-6 mb-8">
             <h2 className="text-xl font-bold font-display text-foreground mb-4">Get in Touch</h2>
-            <div className="space-y-4">
+            <form onSubmit={handleSendMessage} className="space-y-4">
               <input
                 type="text"
                 placeholder="Your Name"
+                value={contactForm.name}
+                onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
               />
               <input
                 type="email"
                 placeholder="Your Email"
+                value={contactForm.email}
+                onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
               />
               <textarea
                 rows={3}
                 placeholder="Your Message"
+                value={contactForm.message}
+                onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none"
               />
-              <NeonButton className="w-full">Send Message</NeonButton>
-            </div>
+              <NeonButton type="submit" className="w-full">Send Message</NeonButton>
+            </form>
           </GlassCard>
         </motion.div>
 
@@ -160,9 +240,48 @@ const PublicProfile = () => {
               <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-xl font-bold font-display text-foreground mb-2">Private Content</h2>
               <p className="text-muted-foreground mb-4">Enter PIN to unlock additional information</p>
-              <NeonButton variant="outline" onClick={() => setShowPinDialog(true)}>
-                Unlock with PIN
-              </NeonButton>
+              
+              {showPinInput ? (
+                <div className="space-y-4">
+                  <input
+                    type="password"
+                    maxLength={4}
+                    placeholder="Enter 4-digit PIN"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground text-center text-2xl tracking-widest"
+                  />
+                  <div className="flex gap-3">
+                    <NeonButton variant="outline" className="flex-1" onClick={() => setShowPinInput(false)}>
+                      Cancel
+                    </NeonButton>
+                    <NeonButton className="flex-1" onClick={handleUnlock}>
+                      Unlock
+                    </NeonButton>
+                  </div>
+                </div>
+              ) : (
+                <NeonButton variant="outline" onClick={() => setShowPinInput(true)}>
+                  Unlock with PIN
+                </NeonButton>
+              )}
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* Unlocked Private Content */}
+        {isUnlocked && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <GlassCard className="p-6" variant="neon">
+              <h2 className="text-xl font-bold font-display text-foreground mb-4">Private Information</h2>
+              <div className="space-y-3">
+                <p className="text-foreground"><span className="text-muted-foreground">Email:</span> {profileData.email}</p>
+                <p className="text-foreground"><span className="text-muted-foreground">Phone:</span> {profileData.phone}</p>
+                <p className="text-foreground"><span className="text-muted-foreground">Company:</span> {profileData.company}</p>
+              </div>
             </GlassCard>
           </motion.div>
         )}

@@ -5,33 +5,15 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   User,
-  Palette,
   QrCode,
-  Activity,
-  Users,
-  Download,
-  Shield,
-  Package,
-  Settings,
-  CreditCard,
   ChevronLeft,
   ChevronRight,
-  LogOut,
-  Menu,
 } from "lucide-react";
 
 const menuItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Profile Editor", path: "/dashboard/profile", icon: User },
-  { name: "Theme Customizer", path: "/dashboard/themes", icon: Palette },
   { name: "QR Builder", path: "/dashboard/qr-builder", icon: QrCode },
-  { name: "Interaction Log", path: "/dashboard/interactions", icon: Activity },
-  { name: "Contacts", path: "/dashboard/contacts", icon: Users },
-  { name: "Export Center", path: "/dashboard/export", icon: Download },
-  { name: "Security", path: "/dashboard/security", icon: Shield },
-  { name: "Order Tracking", path: "/dashboard/orders", icon: Package },
-  { name: "Account Settings", path: "/dashboard/settings", icon: Settings },
-  { name: "Billing", path: "/dashboard/billing", icon: CreditCard },
 ];
 
 interface DashboardSidebarProps {
@@ -140,7 +122,7 @@ export const DashboardSidebar = ({ collapsed, onToggle }: DashboardSidebarProps)
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-sidebar/95 backdrop-blur-xl border-t border-sidebar-border z-50 safe-area-inset-bottom">
         <div className="flex items-center justify-around py-2">
-          {menuItems.slice(0, 5).map((item) => {
+          {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -158,13 +140,6 @@ export const DashboardSidebar = ({ collapsed, onToggle }: DashboardSidebarProps)
               </Link>
             );
           })}
-          <Link
-            to="/dashboard/settings"
-            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-muted-foreground"
-          >
-            <Menu className="w-5 h-5" />
-            <span className="text-[10px] font-medium">More</span>
-          </Link>
         </div>
       </nav>
     </>
