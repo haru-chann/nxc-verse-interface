@@ -28,6 +28,8 @@ import NotFound from "./pages/NotFound";
 import DashboardHome from "./pages/dashboard/DashboardHome";
 import ProfileEditor from "./pages/dashboard/ProfileEditor";
 import QRBuilder from "./pages/dashboard/QRBuilder";
+import InteractionLog from "./pages/dashboard/InteractionLog";
+import ContactsManager from "./pages/dashboard/ContactsManager";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -66,6 +68,8 @@ const App = () => (
             <Route index element={<DashboardHome />} />
             <Route path="profile" element={<ProfileEditor />} />
             <Route path="qr-builder" element={<QRBuilder />} />
+            <Route path="interactions" element={<InteractionLog />} />
+            <Route path="contacts" element={<ContactsManager />} />
           </Route>
 
           {/* Admin Routes */}
