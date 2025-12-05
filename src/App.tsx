@@ -65,26 +65,12 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<DashboardHome />} />
             <Route path="profile" element={<ProfileEditor />} />
-            <Route path="themes" element={<ProfileEditor />} />
             <Route path="qr-builder" element={<QRBuilder />} />
-            <Route path="interactions" element={<DashboardHome />} />
-            <Route path="contacts" element={<DashboardHome />} />
-            <Route path="export" element={<DashboardHome />} />
-            <Route path="security" element={<DashboardHome />} />
-            <Route path="orders" element={<DashboardHome />} />
-            <Route path="settings" element={<ProfileEditor />} />
-            <Route path="billing" element={<DashboardHome />} />
           </Route>
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<AdminDashboard />} />
-            <Route path="orders" element={<AdminDashboard />} />
-            <Route path="analytics" element={<AdminDashboard />} />
-            <Route path="templates" element={<AdminDashboard />} />
-            <Route path="content" element={<AdminDashboard />} />
-            <Route path="moderation" element={<AdminDashboard />} />
           </Route>
 
           {/* 404 */}

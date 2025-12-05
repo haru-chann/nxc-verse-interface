@@ -7,19 +7,14 @@ const footerLinks = {
     { name: "Features", path: "/features" },
     { name: "Pricing", path: "/pricing" },
     { name: "Card Store", path: "/store" },
-    { name: "Templates", path: "/features#templates" },
   ],
   company: [
     { name: "About", path: "/about" },
     { name: "Blog", path: "/blog" },
-    { name: "Careers", path: "/careers" },
     { name: "Contact", path: "/contact" },
   ],
   support: [
     { name: "FAQs", path: "/faqs" },
-    { name: "Help Center", path: "/help" },
-    { name: "Privacy Policy", path: "/privacy" },
-    { name: "Terms of Service", path: "/terms" },
   ],
 };
 
@@ -124,17 +119,6 @@ export const Footer = () => {
           <p className="text-muted-foreground text-sm">
             © {new Date().getFullYear()} NXC Badge Verse. All rights reserved.
           </p>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link to="/privacy" className="hover:text-primary transition-colors">
-              Privacy
-            </Link>
-            <Link to="/terms" className="hover:text-primary transition-colors">
-              Terms
-            </Link>
-            <Link to="/cookies" className="hover:text-primary transition-colors">
-              Cookies
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

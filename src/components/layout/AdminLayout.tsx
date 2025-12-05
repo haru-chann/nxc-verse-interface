@@ -28,12 +28,6 @@ import {
 
 const adminMenuItems = [
   { name: "Dashboard", path: "/admin", icon: LayoutDashboard },
-  { name: "Users", path: "/admin/users", icon: Users },
-  { name: "Orders", path: "/admin/orders", icon: Package },
-  { name: "Analytics", path: "/admin/analytics", icon: BarChart3 },
-  { name: "Templates", path: "/admin/templates", icon: Palette },
-  { name: "Content", path: "/admin/content", icon: FileText },
-  { name: "Moderation", path: "/admin/moderation", icon: Shield },
 ];
 
 export const AdminLayout = () => {
