@@ -8,6 +8,7 @@ import {
   QrCode,
   Activity,
   Users,
+  Settings,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const menuItems = [
   { name: "QR Builder", path: "/dashboard/qr-builder", icon: QrCode },
   { name: "Interactions", path: "/dashboard/interactions", icon: Activity },
   { name: "Contacts", path: "/dashboard/contacts", icon: Users },
+  { name: "Settings", path: "/dashboard/settings", icon: Settings },
 ];
 
 interface DashboardSidebarProps {

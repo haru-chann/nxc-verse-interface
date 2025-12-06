@@ -30,6 +30,7 @@ import ProfileEditor from "./pages/dashboard/ProfileEditor";
 import QRBuilder from "./pages/dashboard/QRBuilder";
 import InteractionLog from "./pages/dashboard/InteractionLog";
 import ContactsManager from "./pages/dashboard/ContactsManager";
+import Settings from "./pages/dashboard/Settings";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="qr-builder" element={<QRBuilder />} />
             <Route path="interactions" element={<InteractionLog />} />
             <Route path="contacts" element={<ContactsManager />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           {/* Admin Routes */}
