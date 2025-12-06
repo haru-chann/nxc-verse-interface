@@ -66,6 +66,9 @@ const ContactsManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Simulating profile public status - in real app this would come from user settings
+  const isProfilePublic = true;
 
   const filteredContacts = useMemo(() => {
     if (!searchQuery) return contacts;
@@ -104,16 +107,15 @@ const ContactsManager = () => {
   };
 
   const exportToCSV = (contactsToExport: Contact[]) => {
-    const headers = ["Name", "Email", "Phone", "Company", "Location", "Source", "Date Saved", "Notes"];
+    // Simplified CSV: Contact name, Email, Date, Phone (only if profile public), Company, Location
+    const headers = ["Contact", "Email", "Date", "Phone", "Company", "Location"];
     const rows = contactsToExport.map((contact) => [
       contact.name,
       contact.email,
-      contact.phone,
+      contact.savedAt.toLocaleDateString(),
+      isProfilePublic ? contact.phone : "", // Only include phone if profile is public
       contact.company,
       contact.location,
-      contact.source,
-      contact.savedAt.toLocaleDateString(),
-      contact.notes || "",
     ]);
 
     const csvContent = [headers, ...rows]
@@ -130,7 +132,8 @@ const ContactsManager = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    toast.success(`Exported ${contactsToExport.length} leads to CSV`);
+    const phoneNote = isProfilePublic ? "" : " (phone numbers hidden - profile is private)";
+    toast.success(`Exported ${contactsToExport.length} leads to CSV${phoneNote}`);
   };
 
   const exportSelected = () => {

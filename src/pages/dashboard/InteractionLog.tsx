@@ -157,21 +157,20 @@ const InteractionLog = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ["ID", "Type", "Date", "Time", "Location", "Country", "Device", "Browser", "Source", "Duration (s)"];
+    // Simplified CSV: Contact (source), Email (N/A for interactions), Date, Phone (N/A), Company (N/A), Location
+    const headers = ["Contact", "Email", "Date", "Phone", "Company", "Location"];
     const rows = filteredData.map((item) => [
-      item.id,
-      typeLabels[item.type].label,
+      item.source, // Contact source
+      "", // Email - not available for interactions
       item.timestamp.toLocaleDateString(),
-      item.timestamp.toLocaleTimeString(),
-      item.location,
-      item.country,
-      item.device,
-      item.browser,
-      item.source,
-      item.duration || "",
+      "", // Phone - not available for interactions  
+      "", // Company - not available for interactions
+      `${item.location}, ${item.country}`,
     ]);
 
-    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

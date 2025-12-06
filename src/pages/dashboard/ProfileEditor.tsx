@@ -2,14 +2,30 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { User, Link as LinkIcon, Image, Plus, GripVertical, Trash2, Save } from "lucide-react";
+import { User, Link as LinkIcon, Image, Plus, GripVertical, Trash2, Save, Building, MapPin, Phone, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 const ProfileEditor = () => {
+  const [isPublic, setIsPublic] = useState(true);
+  const [profileData, setProfileData] = useState({
+    displayName: "John Doe",
+    title: "Product Designer",
+    bio: "Passionate about creating beautiful digital experiences.",
+    company: "TechCorp Inc.",
+    location: "San Francisco, CA",
+    phone: "+1 555-123-4567",
+  });
+  
   const [links, setLinks] = useState([
     { id: 1, title: "Website", url: "https://johndoe.com", icon: "globe" },
     { id: 2, title: "LinkedIn", url: "https://linkedin.com/in/johndoe", icon: "linkedin" },
     { id: 3, title: "Twitter", url: "https://twitter.com/johndoe", icon: "twitter" },
   ]);
+
+  const handleSave = () => {
+    toast.success("Profile saved successfully!");
+  };
 
   return (
     <div className="space-y-8">
@@ -18,7 +34,7 @@ const ProfileEditor = () => {
           <h1 className="text-3xl font-bold font-display text-foreground">Profile Editor</h1>
           <p className="text-muted-foreground mt-1">Customize your digital identity</p>
         </div>
-        <NeonButton>
+        <NeonButton onClick={handleSave}>
           <Save className="w-4 h-4 mr-2" />
           Save Changes
         </NeonButton>
@@ -46,16 +62,97 @@ const ProfileEditor = () => {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Display Name</label>
-                  <input type="text" defaultValue="John Doe" className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" />
+                  <input 
+                    type="text" 
+                    value={profileData.displayName}
+                    onChange={(e) => setProfileData({...profileData, displayName: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Title</label>
-                  <input type="text" defaultValue="Product Designer" className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" />
+                  <input 
+                    type="text" 
+                    value={profileData.title}
+                    onChange={(e) => setProfileData({...profileData, title: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                  />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Bio</label>
-                <textarea rows={3} defaultValue="Passionate about creating beautiful digital experiences." className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none" />
+                <textarea 
+                  rows={3} 
+                  value={profileData.bio}
+                  onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none" 
+                />
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Contact & Company Info */}
+          <GlassCard className="p-6">
+            <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
+              <Building className="w-5 h-5 text-primary" />
+              Contact & Company
+            </h2>
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Building className="w-4 h-4 text-muted-foreground" />
+                    Company Name
+                  </label>
+                  <input 
+                    type="text" 
+                    value={profileData.company}
+                    onChange={(e) => setProfileData({...profileData, company: e.target.value})}
+                    placeholder="Your company name"
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    Location
+                  </label>
+                  <input 
+                    type="text" 
+                    value={profileData.location}
+                    onChange={(e) => setProfileData({...profileData, location: e.target.value})}
+                    placeholder="City, Country"
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  Phone Number
+                </label>
+                <input 
+                  type="tel" 
+                  value={profileData.phone}
+                  onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                  placeholder="+1 555-123-4567"
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Phone number will only be included in CSV exports if your profile is public.
+                </p>
+              </div>
+              
+              {/* Public Profile Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <Globe className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-foreground">Public Profile</p>
+                    <p className="text-sm text-muted-foreground">Allow anyone to view your profile and include phone in exports</p>
+                  </div>
+                </div>
+                <Switch checked={isPublic} onCheckedChange={setIsPublic} />
               </div>
             </div>
           </GlassCard>
@@ -114,8 +211,14 @@ const ProfileEditor = () => {
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4">
                   <span className="text-2xl font-bold text-primary-foreground">JD</span>
                 </div>
-                <h4 className="font-bold text-foreground">John Doe</h4>
-                <p className="text-sm text-muted-foreground">Product Designer</p>
+                <h4 className="font-bold text-foreground">{profileData.displayName}</h4>
+                <p className="text-sm text-muted-foreground">{profileData.title}</p>
+                {profileData.company && (
+                  <p className="text-xs text-muted-foreground mt-1">{profileData.company}</p>
+                )}
+                {profileData.location && (
+                  <p className="text-xs text-muted-foreground">{profileData.location}</p>
+                )}
                 <div className="mt-6 w-full px-4 space-y-2">
                   {links.map((link) => (
                     <div key={link.id} className="p-3 rounded-xl bg-muted/50 text-center text-sm text-foreground">
