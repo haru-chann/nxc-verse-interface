@@ -31,6 +31,8 @@ import QRBuilder from "./pages/dashboard/QRBuilder";
 import InteractionLog from "./pages/dashboard/InteractionLog";
 import ContactsManager from "./pages/dashboard/ContactsManager";
 import Settings from "./pages/dashboard/Settings";
+import OrderTracking from "./pages/dashboard/OrderTracking";
+import CardLink from "./pages/dashboard/CardLink";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -72,6 +74,8 @@ const App = () => (
             <Route path="interactions" element={<InteractionLog />} />
             <Route path="contacts" element={<ContactsManager />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="orders" element={<OrderTracking />} />
+            <Route path="card-link" element={<CardLink />} />
           </Route>
 
           {/* Admin Routes */}

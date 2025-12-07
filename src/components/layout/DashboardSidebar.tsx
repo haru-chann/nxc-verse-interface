@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -11,12 +10,16 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Package,
+  Link2,
 } from "lucide-react";
 
 const menuItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Profile Editor", path: "/dashboard/profile", icon: User },
+  { name: "Card Link", path: "/dashboard/card-link", icon: Link2 },
   { name: "QR Builder", path: "/dashboard/qr-builder", icon: QrCode },
+  { name: "Orders", path: "/dashboard/orders", icon: Package },
   { name: "Interactions", path: "/dashboard/interactions", icon: Activity },
   { name: "Contacts", path: "/dashboard/contacts", icon: Users },
   { name: "Settings", path: "/dashboard/settings", icon: Settings },
