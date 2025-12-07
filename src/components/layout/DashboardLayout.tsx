@@ -3,6 +3,7 @@ import { Outlet, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { DashboardSidebar } from "./DashboardSidebar";
+import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
 import { Bell, Search, User, LogOut, ExternalLink } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,12 +16,19 @@ import {
 
 export const DashboardLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+
+      {/* Notification Panel */}
+      <NotificationPanel 
+        isOpen={notificationOpen} 
+        onClose={() => setNotificationOpen(false)} 
       />
 
       <div
@@ -57,9 +65,12 @@ export const DashboardLayout = () => {
               </Link>
 
               {/* Notifications */}
-              <button className="relative p-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-colors">
+              <button 
+                onClick={() => setNotificationOpen(true)}
+                className="relative p-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-colors"
+              >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
               </button>
 
               {/* User Menu */}
