@@ -13,8 +13,6 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Features from "./pages/Features";
-import Pricing from "./pages/Pricing";
-import Store from "./pages/Store";
 import Checkout from "./pages/Checkout";
 import Blog from "./pages/Blog";
 import FAQs from "./pages/FAQs";
@@ -31,7 +29,6 @@ import QRBuilder from "./pages/dashboard/QRBuilder";
 import InteractionLog from "./pages/dashboard/InteractionLog";
 import ContactsManager from "./pages/dashboard/ContactsManager";
 import Settings from "./pages/dashboard/Settings";
-import OrderTracking from "./pages/dashboard/OrderTracking";
 import CardLink from "./pages/dashboard/CardLink";
 
 // Admin Pages
@@ -51,8 +48,6 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />
             <Route path="/features" element={<Features />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/store" element={<Store />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/faqs" element={<FAQs />} />
@@ -74,7 +69,6 @@ const App = () => (
             <Route path="interactions" element={<InteractionLog />} />
             <Route path="contacts" element={<ContactsManager />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="orders" element={<OrderTracking />} />
             <Route path="card-link" element={<CardLink />} />
           </Route>
 

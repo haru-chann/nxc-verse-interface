@@ -9,8 +9,6 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "About", path: "/about" },
   { name: "Features", path: "/features" },
-  { name: "Pricing", path: "/pricing" },
-  { name: "Store", path: "/store" },
   { name: "Blog", path: "/blog" },
   { name: "FAQs", path: "/faqs" },
   { name: "Contact", path: "/contact" },

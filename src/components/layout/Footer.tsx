@@ -2,11 +2,32 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Twitter, Linkedin, Instagram, Github, Mail, MapPin, Phone } from "lucide-react";
 
-const footerLinks = {
+const handleShopClick = (e: React.MouseEvent) => {
+  e.preventDefault();
+  // TODO: Replace with actual shop URL
+  alert('Shop Cards - Coming soon!');
+};
+
+interface FooterLink {
+  name: string;
+  path: string;
+  onClick?: (e: React.MouseEvent) => void;
+}
+
+interface FooterLinks {
+  product: FooterLink[];
+  company: FooterLink[];
+  support: FooterLink[];
+}
+
+const footerLinks: FooterLinks = {
   product: [
     { name: "Features", path: "/features" },
-    { name: "Pricing", path: "/pricing" },
-    { name: "Card Store", path: "/store" },
+    { 
+      name: "Card Store", 
+      path: "#",
+      onClick: handleShopClick
+    }
   ],
   company: [
     { name: "About", path: "/about" },
@@ -70,12 +91,13 @@ export const Footer = () => {
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.path}>
-                  <Link
-                    to={link.path}
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                  <a
+                    href={link.path}
+                    onClick={link.onClick || (() => {})}
+                    className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                   >
                     {link.name}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -86,12 +108,13 @@ export const Footer = () => {
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.path}>
-                  <Link
-                    to={link.path}
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                  <a
+                    href={link.path}
+                    onClick={link.onClick || (() => {})}
+                    className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                   >
                     {link.name}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -102,12 +125,13 @@ export const Footer = () => {
             <ul className="space-y-3">
               {footerLinks.support.map((link) => (
                 <li key={link.path}>
-                  <Link
-                    to={link.path}
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                  <a
+                    href={link.path}
+                    onClick={link.onClick || (() => {})}
+                    className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                   >
                     {link.name}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>

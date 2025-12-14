@@ -71,9 +71,13 @@ export const HeroSection = () => {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </NeonButton>
               </Link>
-              <Link to="/store">
+              <Link to="#" onClick={(e) => {
+                e.preventDefault();
+                // TODO: Replace with actual shop URL
+                alert('Shop Cards - Coming soon!');
+              }}>
                 <NeonButton variant="outline" size="lg" glow={false}>
-                  Explore Cards
+                  Shop Cards
                 </NeonButton>
               </Link>
             </div>
