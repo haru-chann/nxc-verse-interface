@@ -150,6 +150,7 @@
 
   .neon-border-animated {
     @apply neon-border;
+    will-change: box-shadow;
     animation: neon-pulse 2s ease-in-out infinite;
   }
 
@@ -205,6 +206,7 @@
     @apply gradient-border;
     background: linear-gradient(var(--background), var(--background)) padding-box,
       linear-gradient(var(--gradient-angle, 135deg), hsl(var(--primary)), hsl(var(--accent)), hsl(var(--primary))) border-box;
+    will-change: background-position, --gradient-angle;
     animation: gradient-rotate 4s linear infinite;
   }
 
@@ -259,6 +261,7 @@
 
   .bg-grid-animated {
     @apply bg-grid;
+    will-change: background-position;
     animation: grid-move 20s linear infinite;
   }
 
@@ -284,6 +287,7 @@
 
   /* Animation Utilities */
   .animate-float {
+    will-change: transform;
     animation: float 6s ease-in-out infinite;
   }
 

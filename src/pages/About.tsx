@@ -35,10 +35,10 @@ const values = [
 ];
 
 const team = [
-  { name: "Alex Rivera", role: "CEO & Founder", avatar: "AR" },
-  { name: "Jordan Lee", role: "CTO", avatar: "JL" },
-  { name: "Sam Chen", role: "Head of Design", avatar: "SC" },
-  { name: "Morgan Taylor", role: "Head of Product", avatar: "MT" },
+  { name: "Ritesh Martawar", role: "Founder & Developer", avatar: "AR" },
+  { name: "Vishal Pandey", role: "Co-Founder & Developer", avatar: "JL" },
+  { name: "Ishaan Apte", role: "Designer", avatar: "SC" },
+  { name: "Meghant Darji", role: "Product Head", avatar: "MT" },
 ];
 
 const About = () => {

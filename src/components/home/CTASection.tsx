@@ -12,6 +12,7 @@ export const CTASection = () => {
       <div className="absolute inset-0">
         <motion.div
           className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[150px]"
+          style={{ willChange: "transform, opacity" }}
           animate={{
             scale: [1, 1.3, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -20,6 +21,7 @@ export const CTASection = () => {
         />
         <motion.div
           className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[150px]"
+          style={{ willChange: "transform, opacity" }}
           animate={{
             scale: [1.3, 1, 1.3],
             opacity: [0.5, 0.3, 0.5],
