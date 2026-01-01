@@ -3,17 +3,18 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 
 // Layouts
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { AdminLayout } from "@/components/layout/AdminLayout";
+import ScrollToTop from "@/components/layout/ScrollToTop";
 
 // Public Pages
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Features from "./pages/Features";
-import Checkout from "./pages/Checkout";
 import Blog from "./pages/Blog";
 import FAQs from "./pages/FAQs";
 import Contact from "./pages/Contact";
@@ -21,6 +22,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import PublicProfile from "./pages/PublicProfile";
 import NotFound from "./pages/NotFound";
+import RedirectHandler from "./pages/RedirectHandler";
 
 // Dashboard Pages
 import DashboardHome from "./pages/dashboard/DashboardHome";
@@ -31,58 +33,104 @@ import ContactsManager from "./pages/dashboard/ContactsManager";
 import Settings from "./pages/dashboard/Settings";
 import CardLink from "./pages/dashboard/CardLink";
 
-// Admin Pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/faqs" element={<FAQs />} />
-            <Route path="/contact" element={<Contact />} />
-          </Route>
 
-          {/* Auth Routes (No Layout) */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+import { useEffect } from "react";
 
-          {/* Public Profile */}
-          <Route path="/u/:username" element={<PublicProfile />} />
+const App = () => {
+  useEffect(() => {
+    // Prevent right-click
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
 
-          {/* Dashboard Routes */}
-          <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route index element={<DashboardHome />} />
-            <Route path="profile" element={<ProfileEditor />} />
-            <Route path="qr-builder" element={<QRBuilder />} />
-            <Route path="interactions" element={<InteractionLog />} />
-            <Route path="contacts" element={<ContactsManager />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="card-link" element={<CardLink />} />
-          </Route>
+    // Prevent copy/cut
+    const handleCopyCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+    };
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-          </Route>
+    // Prevent dragging (images, text)
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+    };
 
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    // Prevent specific keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+C (Copy), Ctrl+X (Cut), Ctrl+S (Save), Ctrl+P (Print), Ctrl+U (View Source)
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        ['c', 'x', 's', 'p', 'u'].includes(e.key.toLowerCase())
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopyCut);
+    document.addEventListener("cut", handleCopyCut);
+    document.addEventListener("dragstart", handleDragStart);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopyCut);
+      document.removeEventListener("cut", handleCopyCut);
+      document.removeEventListener("dragstart", handleDragStart);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <Routes>
+              {/* Public Routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/features" element={<Features />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/faqs" element={<FAQs />} />
+                <Route path="/contact" element={<Contact />} />
+              </Route>
+
+              {/* Auth Routes (No Layout) */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+
+              {/* Public Profile */}
+              <Route path="/u/:uid" element={<PublicProfile />} />
+
+              {/* NFC Card Redirect */}
+              <Route path="/c/:cardId" element={<RedirectHandler />} />
+
+              {/* Dashboard Routes - Protected */}
+              <Route element={<RequireAuth />}>
+                <Route path="/dashboard" element={<DashboardLayout />}>
+                  <Route index element={<DashboardHome />} />
+                  <Route path="profile" element={<ProfileEditor />} />
+                  <Route path="qr-builder" element={<QRBuilder />} />
+                  <Route path="interactions" element={<InteractionLog />} />
+                  <Route path="contacts" element={<ContactsManager />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="card-link" element={<CardLink />} />
+                </Route>
+              </Route>
+
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

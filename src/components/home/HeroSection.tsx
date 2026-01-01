@@ -4,6 +4,7 @@ import { NeonButton } from "../ui/NeonButton";
 import { GradientText } from "../ui/GradientText";
 import { AnimatedCounter } from "../ui/AnimatedCounter";
 import { ArrowRight, Sparkles, Zap, QrCode, Nfc } from "lucide-react";
+import { toast } from "sonner";
 
 export const HeroSection = () => {
   return (
@@ -12,7 +13,7 @@ export const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-hero" />
       <div className="absolute inset-0 bg-gradient-mesh" />
       <div className="absolute inset-0 bg-grid opacity-30" />
-      
+
       {/* Floating Orbs */}
       <motion.div
         className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[128px]"
@@ -71,15 +72,11 @@ export const HeroSection = () => {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </NeonButton>
               </Link>
-              <Link to="#" onClick={(e) => {
-                e.preventDefault();
-                // TODO: Replace with actual shop URL
-                alert('Shop Cards - Coming soon!');
-              }}>
+              <a href="https://example.com/store" target="_blank" rel="noopener noreferrer">
                 <NeonButton variant="outline" size="lg" glow={false}>
                   Shop Cards
                 </NeonButton>
-              </Link>
+              </a>
             </div>
 
             {/* Stats */}
@@ -130,7 +127,7 @@ export const HeroSection = () => {
               <div className="metal-card w-80 h-48 p-6 relative overflow-hidden group cursor-pointer card-3d">
                 {/* Card Shine */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-50" />
-                
+
                 {/* NFC Icon */}
                 <motion.div
                   className="absolute top-4 right-4"

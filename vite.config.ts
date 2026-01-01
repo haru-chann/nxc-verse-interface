@@ -7,6 +7,7 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ["starchless-averi-nonalliteratively.ngrok-free.dev"],
   },
   plugins: [react()],
   resolve: {

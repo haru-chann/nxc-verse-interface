@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
@@ -6,6 +6,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { Link as LinkIcon, CreditCard, CheckCircle, AlertCircle, Trash2, Plus, ExternalLink, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 
 interface LinkedCard {
   id: string;
@@ -15,54 +16,101 @@ interface LinkedCard {
   cardType: string;
 }
 
+import { collection, query, orderBy, getDocs, addDoc, deleteDoc, doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+
 const CardLink = () => {
+  const { currentUser } = useAuth();
   const [cardUrl, setCardUrl] = useState("");
   const [isLinking, setIsLinking] = useState(false);
-  const [linkedCards, setLinkedCards] = useState<LinkedCard[]>([
-    {
-      id: "1",
-      cardUrl: "nxcbadge.com/c/abc123",
-      linkedAt: "Nov 28, 2024",
-      status: "active",
-      cardType: "Matte Black Metal",
-    },
-  ]);
+  const [linkedCards, setLinkedCards] = useState<LinkedCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
+
+  useEffect(() => {
+    const fetchCards = async () => {
+      if (!currentUser) return;
+      try {
+        const q = query(collection(db, "users", currentUser.uid, "cards"), orderBy("linkedAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        const loadedCards: LinkedCard[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          loadedCards.push({
+            id: doc.id,
+            cardUrl: data.cardUrl,
+            linkedAt: data.linkedAt?.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            status: data.status,
+            cardType: data.cardType,
+          } as LinkedCard);
+        });
+        setLinkedCards(loadedCards);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCards();
+  }, [currentUser]);
 
   const handleLinkCard = async () => {
+    if (!currentUser) return;
     if (!cardUrl.trim()) {
-      toast.error("Please enter a card URL");
+      setErrorAlert({ isOpen: true, message: "Please enter a card URL" });
       return;
     }
 
     // Validate URL format
     const urlPattern = /^(nxcbadge\.com\/c\/|https?:\/\/nxcbadge\.com\/c\/)[a-zA-Z0-9]+$/;
     if (!urlPattern.test(cardUrl.trim())) {
-      toast.error("Invalid card URL format. It should look like: nxcbadge.com/c/abc123");
+      setErrorAlert({ isOpen: true, message: "Invalid card URL format. It should look like: nxcbadge.com/c/abc123" });
       return;
     }
 
     setIsLinking(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newCard: LinkedCard = {
-      id: Date.now().toString(),
-      cardUrl: cardUrl.trim().replace("https://", ""),
-      linkedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      status: "active",
-      cardType: "New Card",
-    };
 
-    setLinkedCards([...linkedCards, newCard]);
-    setCardUrl("");
-    setIsLinking(false);
-    toast.success("Card linked successfully! Your NFC card now points to your profile.");
+    try {
+      const cleanUrl = cardUrl.trim().replace("https://", "");
+      const newCardData = {
+        cardUrl: cleanUrl,
+        linkedAt: serverTimestamp(),
+        status: "active",
+        cardType: "Active Card", // We can't identify type from URL alone easily without backend lookup of card IDs, assuming generic for now
+      };
+
+      const docRef = await addDoc(collection(db, "users", currentUser.uid, "cards"), newCardData);
+
+      const newCard: LinkedCard = {
+        id: docRef.id,
+        cardUrl: cleanUrl,
+        linkedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        status: "active",
+        cardType: "Active Card",
+      };
+
+      setLinkedCards([newCard, ...linkedCards]);
+      setCardUrl("");
+      toast.success("Card linked successfully! Your NFC card now points to your profile.");
+    } catch (error) {
+      console.error(error);
+      setErrorAlert({ isOpen: true, message: "Failed to link card" });
+    } finally {
+      setIsLinking(false);
+    }
   };
 
-  const handleUnlinkCard = (id: string) => {
-    setLinkedCards(linkedCards.filter(card => card.id !== id));
-    toast.success("Card unlinked successfully");
+  const handleUnlinkCard = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid, "cards", id));
+      setLinkedCards(linkedCards.filter(card => card.id !== id));
+      toast.success("Card unlinked successfully");
+    } catch (error) {
+      console.error(error);
+      setErrorAlert({ isOpen: true, message: "Failed to unlink card" });
+    }
   };
 
   return (
@@ -165,7 +213,7 @@ const CardLink = () => {
       {/* Linked Cards */}
       <div>
         <h2 className="text-xl font-bold font-display text-foreground mb-4">Linked Cards</h2>
-        
+
         {linkedCards.length > 0 ? (
           <div className="space-y-4">
             {linkedCards.map((card, index) => (
@@ -258,7 +306,12 @@ const CardLink = () => {
           </li>
         </ul>
       </GlassCard>
-    </div>
+      <ErrorAlert
+        isOpen={errorAlert.isOpen}
+        onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
+        message={errorAlert.message}
+      />
+    </div >
   );
 };
 

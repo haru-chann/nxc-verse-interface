@@ -3,6 +3,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { Link } from "react-router-dom";
 import { ArrowRight, Calendar, Clock, User } from "lucide-react";
+import { toast } from "sonner";
 
 const featuredPost = {
   id: 1,
@@ -87,7 +88,7 @@ const Blog = () => {
       <section className="py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-hero" />
         <div className="absolute inset-0 bg-gradient-mesh" />
-        
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center max-w-3xl mx-auto"
@@ -158,13 +159,13 @@ const Blog = () => {
                       {featuredPost.readTime}
                     </span>
                   </div>
-                  <Link
-                    to={`/blog/${featuredPost.id}`}
+                  <button
+                    onClick={() => toast.info("Full article coming soon!")}
                     className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
                   >
                     Read Article
                     <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  </button>
                 </div>
               </div>
             </GlassCard>
@@ -183,29 +184,30 @@ const Blog = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
+                onClick={() => toast.info("Full article coming soon!")}
+                className="cursor-pointer"
               >
-                <Link to={`/blog/${post.id}`}>
-                  <GlassCard variant="hover" className="p-6 h-full flex flex-col">
-                    <div className="aspect-video rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-4">
-                      <span className="text-3xl font-bold font-display text-primary/30">
-                        {post.image}
-                      </span>
-                    </div>
-                    <span className="inline-block px-2 py-1 rounded-lg bg-muted text-muted-foreground text-xs font-medium mb-3 w-fit">
-                      {post.category}
+                <GlassCard variant="hover" className="p-6 h-full flex flex-col">
+                  {/* ... content ... */}
+                  <div className="aspect-video rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-4">
+                    <span className="text-3xl font-bold font-display text-primary/30">
+                      {post.image}
                     </span>
-                    <h3 className="text-lg font-bold font-display text-foreground mb-2 line-clamp-2">
-                      {post.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-1">
-                      {post.excerpt}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{post.author}</span>
-                      <span>{post.readTime}</span>
-                    </div>
-                  </GlassCard>
-                </Link>
+                  </div>
+                  <span className="inline-block px-2 py-1 rounded-lg bg-muted text-muted-foreground text-xs font-medium mb-3 w-fit">
+                    {post.category}
+                  </span>
+                  <h3 className="text-lg font-bold font-display text-foreground mb-2 line-clamp-2">
+                    {post.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-1">
+                    {post.excerpt}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{post.author}</span>
+                    <span>{post.readTime}</span>
+                  </div>
+                </GlassCard>
               </motion.div>
             ))}
           </div>

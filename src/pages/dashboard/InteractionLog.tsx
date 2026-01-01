@@ -1,14 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { 
-  Eye, MousePointer, Users, MapPin, Clock, Download, 
+import {
+  Eye, MousePointer, Users, MapPin, Clock, Download,
   Search, Filter, ChevronDown, Calendar, Globe, Smartphone,
-  ArrowUpDown, ChevronLeft, ChevronRight
+  ArrowUpDown, ChevronLeft, ChevronRight, MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import {
   Select,
   SelectContent,
@@ -31,56 +32,28 @@ interface Interaction {
   duration?: number;
 }
 
-// Generate dummy data
-const generateInteractions = (): Interaction[] => {
-  const types: InteractionType[] = ["view", "tap", "contact_saved", "link_click"];
-  const locations = [
-    { city: "San Francisco", country: "USA" },
-    { city: "New York", country: "USA" },
-    { city: "London", country: "UK" },
-    { city: "Tokyo", country: "Japan" },
-    { city: "Paris", country: "France" },
-    { city: "Berlin", country: "Germany" },
-    { city: "Sydney", country: "Australia" },
-    { city: "Toronto", country: "Canada" },
-  ];
-  const devices = ["iPhone 15", "Samsung Galaxy S24", "MacBook Pro", "Windows PC", "iPad Pro"];
-  const browsers = ["Chrome", "Safari", "Firefox", "Edge"];
-  const sources = ["QR Scan", "NFC Tap", "Direct Link", "Social Media", "Email Signature"];
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 
-  const interactions: Interaction[] = [];
-  
-  for (let i = 0; i < 50; i++) {
-    const loc = locations[Math.floor(Math.random() * locations.length)];
-    const date = new Date();
-    date.setHours(date.getHours() - Math.floor(Math.random() * 720)); // Random time within last 30 days
-    
-    interactions.push({
-      id: `INT-${String(i + 1).padStart(4, "0")}`,
-      type: types[Math.floor(Math.random() * types.length)],
-      timestamp: date,
-      location: loc.city,
-      country: loc.country,
-      device: devices[Math.floor(Math.random() * devices.length)],
-      browser: browsers[Math.floor(Math.random() * browsers.length)],
-      source: sources[Math.floor(Math.random() * sources.length)],
-      duration: Math.floor(Math.random() * 300) + 5,
-    });
-  }
-  
-  return interactions.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-};
+// ... (keep interface and typeLabels)
 
-const interactions = generateInteractions();
+// Removed generateInteractions logic
 
-const typeLabels: Record<InteractionType, { label: string; icon: typeof Eye; color: string }> = {
+const typeLabels: Record<string, { label: string; icon: typeof Eye; color: string }> = {
   view: { label: "Profile View", icon: Eye, color: "text-primary" },
   tap: { label: "NFC Tap", icon: MousePointer, color: "text-accent" },
   contact_saved: { label: "Contact Saved", icon: Users, color: "text-success" },
   link_click: { label: "Link Click", icon: Globe, color: "text-warning" },
+  message: { label: "Message", icon: MessageSquare, color: "text-blue-500" },
 };
 
 const InteractionLog = () => {
+  const { currentUser } = useAuth();
+  const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("30");
@@ -88,6 +61,40 @@ const InteractionLog = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    setLoading(true);
+    const q = query(collection(db, "users", currentUser.uid, "interactions"));
+
+    // Real-time listener
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedInteractions: Interaction[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        loadedInteractions.push({
+          id: doc.id,
+          type: data.type,
+          timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(),
+          location: data.metadata?.location || data.location || "Unknown",
+          country: data.metadata?.country || data.country || "Unknown",
+          device: data.metadata?.device || data.device || "Unknown",
+          browser: data.metadata?.browser || data.browser || "Unknown",
+          source: data.source || "Unknown",
+          duration: data.duration || 0,
+        } as Interaction);
+      });
+      setInteractions(loadedInteractions);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching interactions:", error);
+      setErrorAlert({ isOpen: true, message: "Failed to load interactions" });
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   const filteredData = useMemo(() => {
     let data = [...interactions];
@@ -180,7 +187,7 @@ const InteractionLog = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     toast.success(`Exported ${filteredData.length} interactions to CSV`);
   };
 
@@ -332,62 +339,73 @@ const InteractionLog = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedData.map((item, index) => {
-                const typeInfo = typeLabels[item.type];
-                return (
-                  <motion.tr
-                    key={item.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.02 }}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-muted ${typeInfo.color}`}>
-                          <typeInfo.icon className="w-4 h-4" />
+              {paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <Search className="w-8 h-8 opacity-50" />
+                      <p>No interactions found matching your filters.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedData.map((item, index) => {
+                  const typeInfo = typeLabels[item.type] || { label: "Unknown (" + item.type + ")", icon: Eye, color: "text-muted-foreground" };
+                  return (
+                    <motion.tr
+                      key={item.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.02 }}
+                      className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-muted ${typeInfo.color}`}>
+                            <typeInfo.icon className="w-4 h-4" />
+                          </div>
+                          <span className="font-medium text-foreground">{typeInfo.label}</span>
                         </div>
-                        <span className="font-medium text-foreground">{typeInfo.label}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        <div>
-                          <p className="text-foreground">{formatTimeAgo(item.timestamp)}</p>
-                          <p className="text-xs">{item.timestamp.toLocaleDateString()}</p>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          <div>
+                            <p className="text-foreground">{formatTimeAgo(item.timestamp)}</p>
+                            <p className="text-xs">{item.timestamp.toLocaleDateString()}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-foreground">{item.location}</p>
-                          <p className="text-xs text-muted-foreground">{item.country}</p>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-foreground">{item.location}</p>
+                            <p className="text-xs text-muted-foreground">{item.country}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4 hidden md:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Smartphone className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-foreground">{item.device}</p>
-                          <p className="text-xs text-muted-foreground">{item.browser}</p>
+                      </td>
+                      <td className="p-4 hidden md:table-cell">
+                        <div className="flex items-center gap-2">
+                          <Smartphone className="w-4 h-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-foreground">{item.device}</p>
+                            <p className="text-xs text-muted-foreground">{item.browser}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4 hidden lg:table-cell">
-                      <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-sm">
-                        {item.source}
-                      </span>
-                    </td>
-                    <td className="p-4 hidden lg:table-cell">
-                      <span className="text-muted-foreground">{item.duration}s</span>
-                    </td>
-                  </motion.tr>
-                );
-              })}
+                      </td>
+                      <td className="p-4 hidden lg:table-cell">
+                        <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-sm">
+                          {item.source}
+                        </span>
+                      </td>
+                      <td className="p-4 hidden lg:table-cell">
+                        <span className="text-muted-foreground">{item.duration}s</span>
+                      </td>
+                    </motion.tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -419,7 +437,12 @@ const InteractionLog = () => {
           </div>
         </div>
       </GlassCard>
-    </div>
+      <ErrorAlert
+        isOpen={errorAlert.isOpen}
+        onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
+        message={errorAlert.message}
+      />
+    </div >
   );
 };
 

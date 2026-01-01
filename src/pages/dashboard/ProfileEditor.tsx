@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { userService, UserProfile } from "@/services/userService";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { User, Link as LinkIcon, Image, Plus, GripVertical, Trash2, Save, Building, MapPin, Phone, Globe, Lock, Briefcase, Eye, EyeOff } from "lucide-react";
+
+import { User, Link as LinkIcon, Image, Plus, GripVertical, Trash2, Save, Building, MapPin, Phone, Globe, Lock, Briefcase, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { storageService } from "@/services/storageService";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { getFriendlyErrorMessage } from "@/lib/errorUtils";
 
 interface PortfolioItem {
   id: number;
@@ -21,51 +27,237 @@ interface PrivateContent {
 }
 
 const ProfileEditor = () => {
-  const [isPublic, setIsPublic] = useState(true);
-  const [profileData, setProfileData] = useState({
-    displayName: "John Doe",
-    title: "Product Designer",
-    bio: "Passionate about creating beautiful digital experiences.",
-    company: "TechCorp Inc.",
-    location: "San Francisco, CA",
-    phone: "+1 555-123-4567",
+  const { currentUser } = useAuth();
+  const [profileData, setProfileData] = useState<Partial<UserProfile> & {
+    title?: string,
+    company?: string,
+    phone?: string,
+  }>({
+    displayName: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    title: "",
+    bio: "",
+    company: "",
+    location: "",
+    phone: "",
+    photoURL: "",
+    coverImage: "",
   });
-  
-  const [links, setLinks] = useState([
-    { id: 1, title: "Website", url: "https://johndoe.com", icon: "globe" },
-    { id: 2, title: "LinkedIn", url: "https://linkedin.com/in/johndoe", icon: "linkedin" },
-    { id: 3, title: "Twitter", url: "https://twitter.com/johndoe", icon: "twitter" },
-  ]);
 
-  // Portfolio state
-  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([
-    { id: 1, title: "Brand Identity Project", description: "Complete rebrand for tech startup", category: "Design" },
-    { id: 2, title: "E-commerce Platform", description: "Full-stack web application", category: "Development" },
-    { id: 3, title: "Mobile App UI", description: "iOS and Android design system", category: "Design" },
-  ]);
-  const [newPortfolioItem, setNewPortfolioItem] = useState({ title: "", description: "", category: "" });
-  const [showAddPortfolio, setShowAddPortfolio] = useState(false);
-
-  // Private content state
-  const [privateContents, setPrivateContents] = useState<PrivateContent[]>([
-    { id: 1, title: "Personal Email", content: "john.private@email.com" },
-    { id: 2, title: "Meeting Link", content: "https://calendly.com/johndoe/private" },
-  ]);
-  const [newPrivateContent, setNewPrivateContent] = useState({ title: "", content: "" });
-  const [showAddPrivate, setShowAddPrivate] = useState(false);
-
-  // PIN lock state
+  // State initialization for other fields...
+  // In a real app we would load these from DB too
+  const [isPublic, setIsPublic] = useState(true);
+  const [links, setLinks] = useState<{ id: number; title: string; url: string; icon: string }[]>([]);
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
+  const [privateContents, setPrivateContents] = useState<PrivateContent[]>([]);
   const [pinEnabled, setPinEnabled] = useState(true);
   const [pin, setPin] = useState("1234");
   const [showPin, setShowPin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
 
-  const handleSave = () => {
-    toast.success("Profile saved successfully!");
+  // Load data
+  useEffect(() => {
+    const loadData = async () => {
+      if (!currentUser) return;
+      try {
+        const data = await userService.getUserProfile(currentUser.uid);
+        const privateData = await userService.getUserPrivateData(currentUser.uid);
+
+        if (data) {
+          console.log("Loaded profile data:", data); // Debug log
+          setProfileData({
+            displayName: data.displayName || "",
+            firstName: data.firstName || "",
+            lastName: data.lastName || "",
+            email: currentUser.email || "",
+            bio: data.bio || "",
+            location: data.location || "",
+            title: (data as any).title || "",
+            company: (data as any).company || "",
+
+            phone: (data as any).phone || "",
+            photoURL: (data as any).photoURL || "",
+            coverImage: (data as any).coverImage || "",
+          });
+
+          // Load extended data if available
+          if ((data as any).links) setLinks((data as any).links);
+          if ((data as any).portfolioItems) setPortfolioItems((data as any).portfolioItems);
+          if ((data as any).isPublic !== undefined) setIsPublic((data as any).isPublic);
+
+          // Load private data from secure path if available, otherwise fallback to public doc (migration)
+          if (privateData) {
+            setPrivateContents((privateData as any).privateContents || []);
+            setPinEnabled((privateData as any).pinEnabled !== undefined ? (privateData as any).pinEnabled : true);
+            setPin((privateData as any).pin || "1234");
+          } else {
+            // Fallback for old data structure
+            if ((data as any).privateContents) setPrivateContents((data as any).privateContents);
+            if ((data as any).pinEnabled !== undefined) setPinEnabled((data as any).pinEnabled);
+            if ((data as any).pin) setPin((data as any).pin);
+          }
+
+          // If the cached profile has photoURL, ensure we use it (though DashboardLayout handles the header, the editor needs to show it too)
+          // The editor primarily uses the file input preview or the big initial avatar.
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [currentUser]);
+
+  // Modals state
+  const [newPortfolioItem, setNewPortfolioItem] = useState<{ title: string, description: string, category: string, imageUrl?: string }>({ title: "", description: "", category: "" });
+  const [showAddPortfolio, setShowAddPortfolio] = useState(false);
+  const [newPrivateContent, setNewPrivateContent] = useState({ title: "", content: "" });
+  const [showAddPrivate, setShowAddPrivate] = useState(false);
+
+  const handleWallpaperUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+
+    const toastId = toast.loading("Uploading wallpaper...");
+    try {
+      const path = `users/${currentUser.uid}/wallpaper_${Date.now()}`;
+
+      // Delete old wallpaper if exists
+      if (profileData.coverImage) {
+        await storageService.deleteImage(profileData.coverImage);
+      }
+
+      const url = await storageService.uploadImage(file, path);
+      setProfileData((prev: any) => ({ ...prev, coverImage: url }));
+      toast.success("Wallpaper uploaded!");
+    } catch (err: any) {
+      console.error(err);
+      setErrorAlert({ isOpen: true, message: "Failed to upload wallpaper: " + (err.message || "Unknown error") });
+    } finally {
+      toast.dismiss(toastId);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!currentUser) return;
+    setLoading(true);
+    try {
+      // We need to send ALL fields that we want to persist, expanding the UserProfile interface in userService might be needed if title/company aren't there.
+      // But for now we cast to any or assume userService handles partials.
+      // Important: We must ensure we aren't losing data.
+
+      const updateData = {
+        displayName: `${profileData.firstName} ${profileData.lastName}`.trim(),
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        bio: profileData.bio,
+        location: profileData.location,
+        title: profileData.title,
+        company: profileData.company,
+        phone: profileData.phone,
+        // Detailed fields
+        links: links,
+        portfolioItems: portfolioItems,
+        coverImage: profileData.coverImage,
+        photoURL: profileData.photoURL,
+        isPublic: isPublic,
+      };
+
+      const privateUpdateData = {
+        privateContents: privateContents,
+        pinEnabled: pinEnabled,
+        pin: pin,
+      };
+
+      await userService.updateUserProfile(currentUser.uid, updateData);
+      await userService.updateUserPrivateData(currentUser.uid, privateUpdateData);
+      toast.success("Profile saved successfully!");
+    } catch (error: any) {
+      console.error(error);
+      setErrorAlert({ isOpen: true, message: getFriendlyErrorMessage(error) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    // Simple validation
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorAlert({ isOpen: true, message: "File size must be less than 5MB" });
+      return;
+    }
+
+    try {
+      const toastId = toast.loading("Uploading image...");
+
+      // Delete old image if exists
+      if (profileData.photoURL) {
+        await storageService.deleteImage(profileData.photoURL);
+      }
+
+      const path = `users/${currentUser.uid}/profile_avatar_${Date.now()}`;
+      const url = await storageService.uploadImage(file, path);
+
+      // Update local state immediately for preview
+      setProfileData(prev => ({ ...prev, photoURL: url }));
+
+      // We DON'T update Auth Profile here because this is the Public Profile picture (independent)
+      // We accept that user has to click "Save Changes" to persist to DB, 
+      // OR we can auto-save just this field to DB like previously?
+      // The previous code did: await userService.updateUserProfile(currentUser.uid, { photoURL: url });
+      // Let's stick to saving to DB immediately for better UX on images
+      await userService.updateUserProfile(currentUser.uid, {
+        photoURL: url
+      });
+
+      toast.dismiss(toastId);
+      toast.success("Profile picture updated!");
+    } catch (error: any) {
+      console.error(error);
+      setErrorAlert({ isOpen: true, message: "Failed to upload image: " + (error.message || "Unknown error") });
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!currentUser || !profileData.photoURL) return;
+
+    try {
+      const toastId = toast.loading("Removing photo...");
+
+      // Delete from storage
+      await storageService.deleteImage(profileData.photoURL);
+
+      // Update DB
+      await userService.updateUserProfile(currentUser.uid, {
+        photoURL: ""
+      });
+
+      // Update State
+      setProfileData(prev => ({ ...prev, photoURL: "" }));
+
+      toast.dismiss(toastId);
+      toast.success("Profile photo removed");
+    } catch (error: any) {
+      console.error(error);
+      setErrorAlert({ isOpen: true, message: "Failed to remove photo" });
+    }
   };
 
   const addPortfolioItem = () => {
     if (!newPortfolioItem.title || !newPortfolioItem.category) {
-      toast.error("Please fill in title and category");
+      setErrorAlert({ isOpen: true, message: "Please fill in title and category" });
       return;
     }
     setPortfolioItems([...portfolioItems, { ...newPortfolioItem, id: Date.now() }]);
@@ -81,7 +273,7 @@ const ProfileEditor = () => {
 
   const addPrivateContent = () => {
     if (!newPrivateContent.title || !newPrivateContent.content) {
-      toast.error("Please fill in all fields");
+      setErrorAlert({ isOpen: true, message: "Please fill in all fields" });
       return;
     }
     setPrivateContents([...privateContents, { ...newPrivateContent, id: Date.now() }]);
@@ -125,41 +317,100 @@ const ProfileEditor = () => {
             </h2>
             <div className="space-y-4">
               <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                  <span className="text-3xl font-bold text-primary-foreground">JD</span>
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden relative group">
+                  {profileData.photoURL ? (
+                    <img src={profileData.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl font-bold text-primary-foreground">
+                      {profileData.displayName?.charAt(0).toUpperCase() || currentUser?.email?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+
+                  {profileData.photoURL && (
+                    <button
+                      onClick={handleRemovePhoto}
+                      className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                    >
+                      <Trash2 className="w-6 h-6 text-destructive" />
+                    </button>
+                  )}
                 </div>
                 <div>
-                  <NeonButton variant="outline" size="sm">Change Photo</NeonButton>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <NeonButton variant="outline" size="sm" className="pointer-events-none">Change Photo</NeonButton>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-2">JPG, PNG up to 5MB</p>
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Display Name</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={profileData.displayName}
-                    onChange={(e) => setProfileData({...profileData, displayName: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                    onChange={(e) => setProfileData({ ...profileData, displayName: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="Display Name"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Title</label>
-                  <input 
-                    type="text" 
-                    value={profileData.title}
-                    onChange={(e) => setProfileData({...profileData, title: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                  <input
+                    type="text"
+                    value={profileData.title || ""}
+                    onChange={(e) => setProfileData({ ...profileData, title: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="Job Title"
                   />
                 </div>
               </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">First Name</label>
+                  <input
+                    type="text"
+                    value={profileData.firstName}
+                    onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="First Name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    value={profileData.lastName}
+                    onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="Last Name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+                <input
+                  type="text"
+                  value={profileData.email}
+                  disabled
+                  className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:outline-none text-muted-foreground cursor-not-allowed"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">Bio</label>
-                <textarea 
-                  rows={3} 
+                <textarea
+                  rows={3}
                   value={profileData.bio}
-                  onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none" 
+                  onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none"
                 />
               </div>
             </div>
@@ -178,12 +429,14 @@ const ProfileEditor = () => {
                     <Building className="w-4 h-4 text-muted-foreground" />
                     Company Name
                   </label>
-                  <input 
-                    type="text" 
+                  <input
+                    name="company"
+                    autoComplete="organization"
+                    type="text"
                     value={profileData.company}
-                    onChange={(e) => setProfileData({...profileData, company: e.target.value})}
+                    onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
                     placeholder="Your company name"
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                   />
                 </div>
                 <div>
@@ -191,12 +444,14 @@ const ProfileEditor = () => {
                     <MapPin className="w-4 h-4 text-muted-foreground" />
                     Location
                   </label>
-                  <input 
-                    type="text" 
+                  <input
+                    name="location"
+                    autoComplete="address-level2"
+                    type="text"
                     value={profileData.location}
-                    onChange={(e) => setProfileData({...profileData, location: e.target.value})}
+                    onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
                     placeholder="City, Country"
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                   />
                 </div>
               </div>
@@ -205,18 +460,20 @@ const ProfileEditor = () => {
                   <Phone className="w-4 h-4 text-muted-foreground" />
                   Phone Number
                 </label>
-                <input 
-                  type="tel" 
+                <input
+                  name="phone"
+                  autoComplete="tel"
+                  type="tel"
                   value={profileData.phone}
-                  onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                   placeholder="+1 555-123-4567"
-                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground" 
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   Phone number will only be included in CSV exports if your profile is public.
                 </p>
               </div>
-              
+
               {/* Public Profile Toggle */}
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border">
                 <div className="flex items-center gap-3">
@@ -251,21 +508,21 @@ const ProfileEditor = () => {
                   layout
                 >
                   <GripVertical className="w-5 h-5 text-muted-foreground cursor-grab" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={link.title}
-                    onChange={(e) => setLinks(links.map(l => l.id === link.id ? {...l, title: e.target.value} : l))}
+                    onChange={(e) => setLinks(links.map(l => l.id === link.id ? { ...l, title: e.target.value } : l))}
                     placeholder="Title"
-                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm" 
+                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
                   />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={link.url}
-                    onChange={(e) => setLinks(links.map(l => l.id === link.id ? {...l, url: e.target.value} : l))}
+                    onChange={(e) => setLinks(links.map(l => l.id === link.id ? { ...l, url: e.target.value } : l))}
                     placeholder="URL"
-                    className="flex-[2] px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm" 
+                    className="flex-[2] px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
                   />
-                  <button 
+                  <button
                     onClick={() => setLinks(links.filter(l => l.id !== link.id))}
                     className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                   >
@@ -301,21 +558,104 @@ const ProfileEditor = () => {
                   type="text"
                   placeholder="Project Title"
                   value={newPortfolioItem.title}
-                  onChange={(e) => setNewPortfolioItem({...newPortfolioItem, title: e.target.value})}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                 />
                 <input
                   type="text"
                   placeholder="Description"
                   value={newPortfolioItem.description}
-                  onChange={(e) => setNewPortfolioItem({...newPortfolioItem, description: e.target.value})}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                 />
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !currentUser) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error("File size must be less than 5MB");
+                        return;
+                      }
+                      const toastId = toast.loading("Uploading portfolio image...");
+                      try {
+                        const path = `users/${currentUser.uid}/portfolio_${Date.now()}`;
+                        const url = await storageService.uploadImage(file, path);
+                        setNewPortfolioItem(prev => ({ ...prev, imageUrl: url }));
+                        toast.success("Image uploaded!");
+                      } catch (err: any) {
+                        console.error(err);
+                        setErrorAlert({ isOpen: true, message: "Failed to upload image: " + (err.message || "") });
+                      } finally {
+                        toast.dismiss(toastId);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 ${newPortfolioItem.imageUrl ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {newPortfolioItem.imageUrl ? (
+                      <>
+                        <Image className="w-4 h-4" />
+                        <span>Image Uploaded</span>
+                      </>
+                    ) : (
+                      <>
+                        <Image className="w-4 h-4" />
+                        <span>Upload Image (Optional)</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Image Upload for Portfolio */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !currentUser) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        setErrorAlert({ isOpen: true, message: "File size must be less than 5MB" });
+                        return;
+                      }
+                      const toastId = toast.loading("Uploading portfolio image...");
+                      try {
+                        const path = `users/${currentUser.uid}/portfolio_${Date.now()}`;
+                        const url = await storageService.uploadImage(file, path);
+                        setNewPortfolioItem(prev => ({ ...prev, imageUrl: url }));
+                        toast.success("Image uploaded!");
+                      } catch (err: any) {
+                        console.error(err);
+                        setErrorAlert({ isOpen: true, message: "Failed to upload image: " + (err.message || "") });
+                      } finally {
+                        toast.dismiss(toastId);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 ${newPortfolioItem.imageUrl ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {newPortfolioItem.imageUrl ? (
+                      <>
+                        <Image className="w-4 h-4" />
+                        <span>Image Uploaded</span>
+                      </>
+                    ) : (
+                      <>
+                        <Image className="w-4 h-4" />
+                        <span>Upload Image (Optional)</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 <input
                   type="text"
                   placeholder="Category (e.g., Design, Development)"
                   value={newPortfolioItem.category}
-                  onChange={(e) => setNewPortfolioItem({...newPortfolioItem, category: e.target.value})}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                 />
                 <div className="flex gap-2">
@@ -332,8 +672,12 @@ const ProfileEditor = () => {
                   className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 group"
                   layout
                 >
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                    <Briefcase className="w-6 h-6 text-primary" />
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Briefcase className="w-6 h-6 text-primary" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-foreground truncate">{item.title}</h4>
@@ -382,7 +726,7 @@ const ProfileEditor = () => {
                 </div>
                 <Switch checked={pinEnabled} onCheckedChange={setPinEnabled} />
               </div>
-              
+
               {pinEnabled && (
                 <div className="flex items-center gap-3">
                   <label className="text-sm font-medium text-foreground">Your PIN:</label>
@@ -419,14 +763,14 @@ const ProfileEditor = () => {
                   type="text"
                   placeholder="Title (e.g., Personal Email, Private Phone)"
                   value={newPrivateContent.title}
-                  onChange={(e) => setNewPrivateContent({...newPrivateContent, title: e.target.value})}
+                  onChange={(e) => setNewPrivateContent({ ...newPrivateContent, title: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                 />
                 <input
                   type="text"
                   placeholder="Content"
                   value={newPrivateContent.content}
-                  onChange={(e) => setNewPrivateContent({...newPrivateContent, content: e.target.value})}
+                  onChange={(e) => setNewPrivateContent({ ...newPrivateContent, content: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                 />
                 <div className="flex gap-2">
@@ -465,8 +809,18 @@ const ProfileEditor = () => {
               <Image className="w-5 h-5 text-primary" />
               Wallpaper
             </h2>
-            <div className="aspect-video rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer">
-              <div className="text-center">
+            <div className="aspect-video relative rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer overflow-hidden group">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleWallpaperUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+              />
+              {profileData.coverImage ? (
+                <img src={profileData.coverImage} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+              ) : null}
+
+              <div className="text-center relative z-10 p-4 bg-background/50 backdrop-blur-sm rounded-xl transition-opacity group-hover:opacity-100">
                 <Image className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
                 <p className="text-muted-foreground">Click to upload wallpaper</p>
               </div>
@@ -480,16 +834,29 @@ const ProfileEditor = () => {
             <h3 className="text-sm font-medium text-muted-foreground mb-4">Live Preview</h3>
             <GlassCard className="p-4 aspect-[9/16] overflow-hidden">
               <div className="h-full rounded-xl bg-gradient-to-b from-primary/10 to-background flex flex-col items-center pt-8 overflow-y-auto custom-scrollbar">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold text-primary-foreground">JD</span>
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-4 overflow-hidden shadow-neon-sm">
+                  {profileData.photoURL ? (
+                    <img src={profileData.photoURL} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-bold text-primary-foreground">
+                      {profileData.displayName?.charAt(0).toUpperCase() || currentUser?.email?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
-                <h4 className="font-bold text-foreground">{profileData.displayName}</h4>
+                <h4 className="font-bold text-foreground text-center px-4">
+                  {profileData.displayName || `${profileData.firstName} ${profileData.lastName}`}
+                </h4>
                 <p className="text-sm text-muted-foreground">{profileData.title}</p>
                 {profileData.company && (
                   <p className="text-xs text-muted-foreground mt-1">{profileData.company}</p>
                 )}
                 {profileData.location && (
                   <p className="text-xs text-muted-foreground">{profileData.location}</p>
+                )}
+                {profileData.bio && (
+                  <div className="mt-4 px-4 w-full">
+                    <p className="text-xs text-center text-muted-foreground line-clamp-4">{profileData.bio}</p>
+                  </div>
                 )}
                 <div className="mt-4 w-full px-4 space-y-2">
                   {links.filter(l => l.title).map((link) => (
@@ -524,6 +891,11 @@ const ProfileEditor = () => {
           </div>
         </div>
       </div>
+      <ErrorAlert
+        isOpen={errorAlert.isOpen}
+        onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
+        message={errorAlert.message}
+      />
     </div>
   );
 };

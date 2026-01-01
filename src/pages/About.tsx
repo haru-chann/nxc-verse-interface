@@ -48,7 +48,7 @@ const About = () => {
       <section className="py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-hero" />
         <div className="absolute inset-0 bg-gradient-mesh" />
-        
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center max-w-3xl mx-auto"
@@ -107,14 +107,14 @@ const About = () => {
                   NXC Badge Verse was born from a simple frustration: the traditional business card was dead, but nothing had truly replaced it for the digital age.
                 </p>
                 <p>
-                  Founded in 2023, we set out to create a platform that combines the elegance of premium materials with the power of digital technology. Our metal NFC cards aren't just business cards—they're a statement.
+                  Founded in 2024, we set out to create a platform that combines the elegance of premium materials with the power of digital technology. Our metal NFC cards aren't just business cards—they're a statement.
                 </p>
                 <p>
                   Today, we serve over 50,000 professionals worldwide, helping them make lasting impressions and meaningful connections every single day.
                 </p>
               </div>
             </motion.div>
-            
+
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}

@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { 
+import {
   Users, Search, Download, Mail, Phone, MapPin, Calendar,
   MoreVertical, Eye, Trash2, X, Building, Globe
 } from "lucide-react";
@@ -14,6 +14,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 
 interface Contact {
   id: string;
@@ -27,48 +32,39 @@ interface Contact {
   notes?: string;
 }
 
-// Generate dummy contacts
-const generateContacts = (): Contact[] => {
-  const firstNames = ["Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Avery", "Quinn", "Cameron", "Drew"];
-  const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Wilson", "Anderson"];
-  const companies = ["TechCorp", "InnovateLabs", "DigitalFirst", "FutureTech", "CloudBase", "DataDriven", "StartupX", "ScaleUp Inc"];
-  const locations = ["San Francisco, CA", "New York, NY", "Austin, TX", "Seattle, WA", "Los Angeles, CA", "Chicago, IL", "Miami, FL", "Denver, CO"];
-  const sources = ["Networking Event", "Conference", "LinkedIn", "Referral", "Cold Outreach", "QR Scan", "NFC Tap"];
-
-  const contacts: Contact[] = [];
-  
-  for (let i = 0; i < 25; i++) {
-    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    const date = new Date();
-    date.setDate(date.getDate() - Math.floor(Math.random() * 60));
-    
-    contacts.push({
-      id: `CON-${String(i + 1).padStart(4, "0")}`,
-      name: `${firstName} ${lastName}`,
-      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${companies[Math.floor(Math.random() * companies.length)].toLowerCase().replace(/\s/g, "")}.com`,
-      phone: `+1 ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
-      company: companies[Math.floor(Math.random() * companies.length)],
-      location: locations[Math.floor(Math.random() * locations.length)],
-      source: sources[Math.floor(Math.random() * sources.length)],
-      savedAt: date,
-      notes: Math.random() > 0.5 ? "Interested in partnership opportunities" : undefined,
-    });
-  }
-  
-  return contacts.sort((a, b) => b.savedAt.getTime() - a.savedAt.getTime());
-};
-
-const initialContacts = generateContacts();
+const initialContacts: Contact[] = [];
 
 const ContactsManager = () => {
+  const { currentUser } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
+  const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
+
   // Simulating profile public status - in real app this would come from user settings
   const isProfilePublic = true;
+
+  // Load Contacts
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchContacts = async () => {
+      try {
+        const q = query(collection(db, "users", currentUser.uid, "contacts"), orderBy("savedAt", "desc"));
+        const snapshot = await getDocs(q);
+        const fetchedContacts = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          savedAt: doc.data().savedAt?.toDate() || new Date(),
+        })) as Contact[];
+        setContacts(fetchedContacts);
+      } catch (error) {
+        console.error("Error fetching contacts:", error);
+        setErrorAlert({ isOpen: true, message: "Failed to load contacts" });
+      }
+    };
+    fetchContacts();
+  }, [currentUser]);
 
   const filteredContacts = useMemo(() => {
     if (!searchQuery) return contacts;
@@ -100,10 +96,36 @@ const ContactsManager = () => {
     }
   };
 
-  const deleteSelected = () => {
-    setContacts(contacts.filter((c) => !selectedIds.has(c.id)));
-    toast.success(`Deleted ${selectedIds.size} contacts`);
-    setSelectedIds(new Set());
+  const deleteSingle = async (contactId: string) => {
+    if (!currentUser) return;
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid, "contacts", contactId));
+      setContacts(contacts.filter(c => c.id !== contactId));
+      toast.success("Contact deleted");
+      if (selectedContact?.id === contactId) setSelectedContact(null);
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      setErrorAlert({ isOpen: true, message: "Failed to delete contact" });
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (!currentUser) return;
+    try {
+      // Sequentially delete for now (simpler than batch if small number, or use batch for robustness)
+      // Using Promise.all for parallel
+      const deletePromises = Array.from(selectedIds).map(id =>
+        deleteDoc(doc(db, "users", currentUser.uid, "contacts", id))
+      );
+      await Promise.all(deletePromises);
+
+      setContacts(contacts.filter((c) => !selectedIds.has(c.id)));
+      toast.success(`Deleted ${selectedIds.size} contacts`);
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error("Error deleting selected:", error);
+      setErrorAlert({ isOpen: true, message: "Failed to delete selected contacts" });
+    }
   };
 
   const exportToCSV = (contactsToExport: Contact[]) => {
@@ -121,7 +143,7 @@ const ContactsManager = () => {
     const csvContent = [headers, ...rows]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
       .join("\n");
-    
+
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -131,7 +153,7 @@ const ContactsManager = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     const phoneNote = isProfilePublic ? "" : " (phone numbers hidden - profile is private)";
     toast.success(`Exported ${contactsToExport.length} leads to CSV${phoneNote}`);
   };
@@ -328,10 +350,7 @@ const ContactsManager = () => {
                           Export
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => {
-                            setContacts(contacts.filter((c) => c.id !== contact.id));
-                            toast.success("Contact deleted");
-                          }}
+                          onClick={() => deleteSingle(contact.id)}
                           className="text-destructive"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -443,7 +462,12 @@ const ContactsManager = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      <ErrorAlert
+        isOpen={errorAlert.isOpen}
+        onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
+        message={errorAlert.message}
+      />
+    </div >
   );
 };
 

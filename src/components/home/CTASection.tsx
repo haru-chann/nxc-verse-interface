@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { NeonButton } from "../ui/NeonButton";
 import { GradientText } from "../ui/GradientText";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 export const CTASection = () => {
   return (
@@ -61,15 +62,11 @@ export const CTASection = () => {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </NeonButton>
             </Link>
-            <Link to="#" onClick={(e) => {
-              e.preventDefault();
-              // TODO: Replace with actual shop URL
-              alert('Shop Cards - Coming soon!');
-            }}>
+            <a href="https://example.com/store" target="_blank" rel="noopener noreferrer">
               <NeonButton variant="outline" size="lg" glow={false}>
                 Shop Premium Cards
               </NeonButton>
-            </Link>
+            </a>
           </div>
 
           {/* Trust Badges */}

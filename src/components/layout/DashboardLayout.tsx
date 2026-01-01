@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -13,10 +13,58 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
+import { userService, UserProfile } from "@/services/userService";
+import { collection, query, limit, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export const DashboardLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const { currentUser, logout } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (currentUser) {
+        try {
+          const data = await userService.getUserProfile(currentUser.uid);
+          setProfile(data);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    fetchProfile();
+
+    if (currentUser) {
+      // Real-time listener for Unread Notifications
+      // Filter out 'view' type alerts to avoid constant blinking
+      const q = query(
+        collection(db, "users", currentUser.uid, "interactions"),
+        limit(100) // Fetch latest 100 interactions to check for unread
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const hasImportantUnread = snapshot.docs.some((doc) => {
+          const data = doc.data();
+          return !data.read && ["tap", "contact_saved", "message"].includes(data.type);
+        });
+        setHasUnread(hasImportantUnread);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [currentUser]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Failed to logout", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,9 +74,9 @@ export const DashboardLayout = () => {
       />
 
       {/* Notification Panel */}
-      <NotificationPanel 
-        isOpen={notificationOpen} 
-        onClose={() => setNotificationOpen(false)} 
+      <NotificationPanel
+        isOpen={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
       />
 
       <div
@@ -54,33 +102,47 @@ export const DashboardLayout = () => {
 
             {/* Actions */}
             <div className="flex items-center gap-4">
-              {/* View Profile */}
+              {/* View Profile Button */}
               <Link
-                to="/u/johndoe"
+                to={currentUser ? `/u/${currentUser.uid}` : "#"}
                 target="_blank"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-sm font-medium text-foreground transition-colors"
+                className="hidden sm:flex"
               >
-                <ExternalLink className="w-4 h-4" />
-                View Profile
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-sm font-medium text-primary transition-colors border border-primary/20"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View Profile
+                </motion.div>
               </Link>
 
               {/* Notifications */}
-              <button 
+              <button
                 onClick={() => setNotificationOpen(true)}
                 className="relative p-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-colors"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                {hasUnread && (
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
+                )}
               </button>
 
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-3 p-1.5 pr-4 rounded-xl bg-muted hover:bg-muted/80 transition-colors">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary-foreground">J</span>
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden">
+                      {currentUser?.photoURL || profile?.photoURL ? (
+                        <img src={currentUser?.photoURL || profile?.photoURL} alt={profile?.displayName} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-5 h-5 text-primary-foreground" />
+                      )}
                     </div>
-                    <span className="hidden sm:block text-sm font-medium text-foreground">John Doe</span>
+                    <span className="hidden sm:block text-sm font-medium text-foreground">
+                      {profile?.displayName || currentUser?.displayName || currentUser?.email?.split('@')[0]}
+                    </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -93,17 +155,15 @@ export const DashboardLayout = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/u/johndoe" target="_blank">
+                    <Link to={currentUser ? `/u/${currentUser.uid}` : "#"} target="_blank">
                       <ExternalLink className="w-4 h-4 mr-2" />
                       View Public Profile
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/login" className="text-destructive">
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </Link>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

@@ -1,29 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { Bell, X, Eye, MousePointer, UserPlus, MessageSquare, ExternalLink } from "lucide-react";
+import { Bell, X, Check, Eye, MousePointer, UserPlus, MessageSquare, CheckCircle, Circle, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { doc, getDoc, updateDoc, collection, query, orderBy, limit, onSnapshot, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { interactionService } from "@/services/interactionService";
+import { toast } from "sonner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 
 interface Notification {
   id: string;
-  type: "view" | "tap" | "contact" | "message";
+  type: "view" | "tap" | "contact_saved" | "message";
   name: string;
-  email: string;
+  email?: string;
   message?: string;
   time: string;
   location: string;
-  avatar?: string;
   read: boolean;
 }
-
-const recentInteractions: Notification[] = [
-  { id: "1", type: "contact", name: "Sarah Chen", email: "sarah@example.com", time: "2 min ago", location: "San Francisco, CA", read: false },
-  { id: "2", type: "view", name: "Michael Brown", email: "michael@company.com", time: "15 min ago", location: "New York, NY", read: false },
-  { id: "3", type: "tap", name: "Emily Davis", email: "emily@startup.io", time: "1 hour ago", location: "London, UK", read: true },
-  { id: "4", type: "message", name: "Alex Johnson", email: "alex@tech.co", message: "Great meeting you at the conference!", time: "2 hours ago", location: "Tokyo, Japan", read: true },
-  { id: "5", type: "view", name: "Jessica Wilson", email: "jessica@design.co", time: "3 hours ago", location: "Paris, France", read: true },
-  { id: "6", type: "contact", name: "David Lee", email: "david@agency.com", time: "5 hours ago", location: "Sydney, AU", read: true },
-];
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -31,22 +28,145 @@ interface NotificationPanelProps {
 }
 
 export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
-  const [notifications, setNotifications] = useState<Notification[]>(recentInteractions);
+  const { currentUser } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => {
+  // Long press handling
+  const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isOpen && currentUser) {
+      const q = query(
+        collection(db, "users", currentUser.uid, "interactions"),
+        // Remove 'where' to avoid Missing Index crashes on composite queries
+        orderBy("timestamp", "desc"),
+        limit(100)
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const loadedNotifications: Notification[] = [];
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data();
+
+          // Client-side filtering
+          if (["tap", "contact_saved", "message", "contact"].includes(data.type)) {
+            let name = "Someone";
+            let type: Notification["type"] = "view"; // Default/Fallback
+
+            if (data.type === "tap") {
+              type = "tap";
+              name = "Anonymous User";
+            } else if (data.type === "contact_saved" || data.type === "contact") {
+              type = "contact_saved";
+              name = data.name || "New Contact";
+            } else if (data.type === "message") {
+              type = "message";
+              name = data.name || "Visitor";
+            }
+
+            loadedNotifications.push({
+              id: doc.id,
+              type: (data.type === 'contact' ? 'contact_saved' : type) as any,
+              name: name,
+              email: data.email,
+              message: data.message,
+              location: data.metadata?.location || "Unknown Location",
+              time: data.timestamp?.toDate ?
+                data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
+                "Just now",
+              read: data.read || false
+            });
+          }
+        });
+        setNotifications(loadedNotifications);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [isOpen, currentUser]);
+
+  const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation(); // Prevent trigger selection
+    if (!currentUser) return;
+
+    // Optimistic update
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+
+    try {
+      await interactionService.updateInteraction(currentUser.uid, id, { read: true });
+    } catch (err) {
+      console.error("Failed to mark read", err);
+    }
   };
 
-  const markAllAsRead = () => {
+  const handleMarkAllRead = async () => {
+    if (!currentUser) return;
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    notifications.forEach(n => {
+      if (!n.read) interactionService.updateInteraction(currentUser.uid, n.id, { read: true });
+    });
+  };
+
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+    if (newSet.size === 0) setIsSelectionMode(false);
+  };
+
+  const handleLongPressStart = (id: string) => {
+    const timer = setTimeout(() => {
+      setIsSelectionMode(true);
+      setSelectedIds(new Set([id]));
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 500);
+    setPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (pressTimer) clearTimeout(pressTimer);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!currentUser) return;
+    const idsToDelete = Array.from(selectedIds);
+
+    // Optimistic
+    setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)));
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+    setShowDeleteConfirm(false);
+
+    try {
+      await Promise.all(idsToDelete.map(id => interactionService.deleteInteraction(currentUser.uid, id)));
+      toast.success(`Deleted ${idsToDelete.length} notifications`);
+    } catch (error) {
+      setErrorAlert({ isOpen: true, message: "Failed to delete notifications" });
+    }
+  };
+
+  const requestDelete = () => {
+    if (selectedIds.size > 1) {
+      setShowDeleteConfirm(true);
+    } else if (selectedIds.size === 1) {
+      handleDeleteSelected();
+    }
   };
 
   const getIcon = (type: string) => {
     switch (type) {
       case "view": return Eye;
       case "tap": return MousePointer;
-      case "contact": return UserPlus;
+      case "contact_saved": return UserPlus;
       case "message": return MessageSquare;
       default: return Eye;
     }
@@ -56,7 +176,7 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
     switch (type) {
       case "view": return "viewed your profile";
       case "tap": return "tapped your card";
-      case "contact": return "saved your contact";
+      case "contact_saved": return "saved your contact";
       case "message": return "sent you a message";
       default: return "interacted with you";
     }
@@ -97,13 +217,22 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
                 <h2 className="text-lg font-bold font-display text-foreground">Recent Interactions</h2>
               </div>
               <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
+                {isSelectionMode ? (
                   <button
-                    onClick={markAllAsRead}
-                    className="text-xs text-primary hover:underline"
+                    onClick={requestDelete}
+                    className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
                   >
-                    Mark all read
+                    <Trash2 className="w-5 h-5" />
                   </button>
+                ) : (
+                  unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  )
                 )}
                 <button
                   onClick={onClose}
@@ -117,76 +246,123 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
             {/* Notifications List */}
             <div className="overflow-y-auto h-[calc(100%-64px)] custom-scrollbar">
               <div className="p-4 space-y-3">
-                {notifications.map((notification, index) => {
-                  const Icon = getIcon(notification.type);
-                  return (
-                    <motion.div
-                      key={notification.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => markAsRead(notification.id)}
-                      className={cn(
-                        "p-4 rounded-xl cursor-pointer transition-all group",
-                        notification.read
-                          ? "bg-muted/50 hover:bg-muted"
-                          : "bg-primary/5 border border-primary/20 hover:bg-primary/10"
-                      )}
-                    >
-                      <div className="flex gap-3">
-                        {/* Avatar */}
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary-foreground font-bold">
-                            {notification.name.split(" ").map(n => n[0]).join("")}
-                          </span>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="font-medium text-foreground truncate">{notification.name}</p>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Icon className="w-3 h-3" />
-                                {getTypeLabel(notification.type)}
-                              </p>
-                            </div>
-                            {!notification.read && (
-                              <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
+                {notifications.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Bell className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                    <p>No new notifications</p>
+                  </div>
+                ) : (
+                  notifications.map((notification, index) => {
+                    const Icon = getIcon(notification.type);
+                    const isSelected = selectedIds.has(notification.id);
+                    return (
+                      <motion.div
+                        key={notification.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        onPointerDown={() => handleLongPressStart(notification.id)}
+                        onPointerUp={handleLongPressEnd}
+                        onPointerLeave={handleLongPressEnd}
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            toggleSelection(notification.id);
+                          } else {
+                            handleMarkAsRead(notification.id);
+                          }
+                        }}
+                        className={cn(
+                          "p-4 rounded-xl cursor-pointer transition-all group flex items-center gap-3",
+                          isSelected ? "bg-primary/10 border-primary" :
+                            notification.read
+                              ? "bg-muted/50 hover:bg-muted"
+                              : "bg-primary/5 border border-primary/20 hover:bg-primary/10",
+                          isSelectionMode && "pl-3"
+                        )}
+                      >
+                        {/* Selection Checkbox */}
+                        {isSelectionMode && (
+                          <div className="flex-shrink-0">
+                            {isSelected ? (
+                              <CheckCircle className="w-5 h-5 text-primary fill-primary/20" />
+                            ) : (
+                              <Circle className="w-5 h-5 text-muted-foreground" />
                             )}
                           </div>
-                          
-                          {notification.message && (
-                            <p className="text-sm text-foreground/80 mt-2 italic">
-                              "{notification.message}"
-                            </p>
-                          )}
-                          
-                          <div className="flex items-center justify-between mt-2">
-                            <p className="text-xs text-muted-foreground">{notification.location}</p>
-                            <p className="text-xs text-muted-foreground">{notification.time}</p>
+                        )}
+
+                        <div className="flex gap-3 flex-1 min-w-0">
+                          {/* Avatar Pattern */}
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
+                            <span className="text-primary-foreground font-bold">
+                              {(notification.name || "Visitor").charAt(0)}
+                            </span>
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-medium text-foreground truncate">{notification.name || "Visitor"}</p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <Icon className="w-3 h-3" />
+                                  {getTypeLabel(notification.type)}
+                                </p>
+                              </div>
+                              {!notification.read && !isSelectionMode && (
+                                <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
+                              )}
+                            </div>
+
+                            {notification.message && (
+                              <p className="text-sm text-foreground/80 mt-2 italic">
+                                "{notification.message}"
+                              </p>
+                            )}
+
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-muted-foreground">{notification.time}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })
+                )}
               </div>
+
+              <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleDeleteSelected}
+                title="Delete Notifications"
+                description={`Are you sure you want to delete ${selectedIds.size} notifications? This cannot be undone.`}
+                confirmText="Delete All"
+                cancelText="Cancel"
+                type="danger"
+              />
 
               {/* View All Link */}
               <div className="p-4 border-t border-border">
-                <a
-                  href="/dashboard/interactions"
+                <Link
+                  to="/dashboard/interactions"
                   className="flex items-center justify-center gap-2 p-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-medium transition-colors group"
+                  onClick={onClose}
                 >
                   View All Interactions
                   <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </a>
+                </Link>
               </div>
             </div>
           </motion.div>
+          <ErrorAlert
+            isOpen={errorAlert.isOpen}
+            onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
+            message={errorAlert.message}
+          />
         </>
       )}
     </AnimatePresence>
   );
 };
+
