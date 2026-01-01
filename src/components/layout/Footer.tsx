@@ -25,7 +25,11 @@ const footerLinks: FooterLinks = {
     { name: "Features", path: "/features" },
     {
       name: "Card Store",
-      path: "https://example.com/store",
+      path: "#",
+      onClick: (e) => {
+        e.preventDefault();
+        toast.info("Coming Soon!!");
+      }
     }
   ],
   company: [

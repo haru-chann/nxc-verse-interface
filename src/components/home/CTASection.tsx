@@ -62,11 +62,11 @@ export const CTASection = () => {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </NeonButton>
             </Link>
-            <a href="https://example.com/store" target="_blank" rel="noopener noreferrer">
+            <div onClick={() => toast.info("Coming Soon!!")} className="cursor-pointer">
               <NeonButton variant="outline" size="lg" glow={false}>
                 Shop Premium Cards
               </NeonButton>
-            </a>
+            </div>
           </div>
 
           {/* Trust Badges */}
