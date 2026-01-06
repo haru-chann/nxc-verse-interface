@@ -1,8 +1,10 @@
+
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { Mail, MapPin, Phone, Clock, MessageSquare, Headphones, Building } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 
 const contactMethods = [
   {
@@ -16,12 +18,52 @@ const contactMethods = [
     icon: Phone,
     title: "Phone",
     description: "Call our support line",
-    value: "+919403276942",
-    action: "tel:+919403276942",
+    value: "+919404276942",
+    action: "tel:+919404276942",
   },
 ];
 
 const Contact = () => {
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    topic: "",
+    message: "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const { firstName, lastName, email, topic, message } = formData;
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    // Construct the email body
+    const body = `𝐍𝐚𝐦𝐞: ${fullName}
+𝐄𝐦𝐚𝐢𝐥: ${email}
+𝐓𝐨𝐩𝐢𝐜: ${topic}
+
+𝐌𝐞𝐬𝐬𝐚𝐠𝐞: ${message}`;
+
+    const subject = `Contact Form: ${topic || "New Message"}`;
+
+    // Gmail Compose URL
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=nxcbadge@gmail.com&su=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+
+    // Redirect user to Gmail
+    window.open(gmailUrl, "_blank");
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
   return (
     <div className="pt-20">
       {/* Hero */}
@@ -63,8 +105,12 @@ const Contact = () => {
                   <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <method.icon className="w-7 h-7 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">{method.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-2">{method.description}</p>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">
+                    {method.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {method.description}
+                  </p>
                   <p className="text-primary font-medium">{method.value}</p>
                 </GlassCard>
               </motion.a>
@@ -91,7 +137,7 @@ const Contact = () => {
               </p>
 
               <GlassCard className="p-6">
-                <form className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
@@ -99,16 +145,23 @@ const Contact = () => {
                       </label>
                       <input
                         type="text"
+                        name="firstName"
+                        required
+                        value={formData.firstName}
+                        onChange={handleChange}
                         className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
                         placeholder="John"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Last Name
+                        Last Name <span className="text-muted-foreground text-xs font-normal ml-1">(Optional)</span>
                       </label>
                       <input
                         type="text"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleChange}
                         className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
                         placeholder="Doe"
                       />
@@ -120,6 +173,10 @@ const Contact = () => {
                     </label>
                     <input
                       type="email"
+                      name="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
                       className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
                       placeholder="john@example.com"
                     />
@@ -128,7 +185,13 @@ const Contact = () => {
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Subject
                     </label>
-                    <select className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground">
+                    <select
+                      name="topic"
+                      required
+                      value={formData.topic}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground"
+                    >
                       <option value="">Select a topic</option>
                       <option value="sales">Sales Inquiry</option>
                       <option value="support">Technical Support</option>
@@ -142,7 +205,11 @@ const Contact = () => {
                       Message
                     </label>
                     <textarea
+                      name="message"
+                      required
                       rows={5}
+                      value={formData.message}
+                      onChange={handleChange}
                       className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-foreground resize-none"
                       placeholder="How can we help you?"
                     />
@@ -161,3 +228,4 @@ const Contact = () => {
 };
 
 export default Contact;
+
