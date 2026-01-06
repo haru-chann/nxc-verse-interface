@@ -24,7 +24,7 @@ const footerLinks: FooterLinks = {
   product: [
     { name: "Features", path: "/features" },
     {
-      name: "Card Store",
+      name: "Order Card",
       path: "#",
       onClick: (e) => {
         e.preventDefault();
@@ -34,20 +34,12 @@ const footerLinks: FooterLinks = {
   ],
   company: [
     { name: "About", path: "/about" },
-    { name: "Blog", path: "/blog" },
     { name: "Contact", path: "/contact" },
   ],
   support: [
     { name: "FAQs", path: "/faqs" },
   ],
 };
-
-const socialLinks = [
-  { icon: Twitter, href: "#", label: "Twitter" },
-  { icon: Linkedin, href: "#", label: "LinkedIn" },
-  { icon: Instagram, href: "#", label: "Instagram" },
-  { icon: Github, href: "#", label: "GitHub" },
-];
 
 export const Footer = () => {
   return (
@@ -71,21 +63,6 @@ export const Footer = () => {
             <p className="text-muted-foreground mb-6 max-w-sm">
               The future of digital identity. Share your profile with a tap, track your connections, and build your personal brand.
             </p>
-            <div className="flex gap-4">
-              {socialLinks.map((social) => (
-                <motion.a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <social.icon className="w-5 h-5" />
-                </motion.a>
-              ))}
-            </div>
           </div>
 
           {/* Links */}

@@ -15,7 +15,6 @@ import ScrollToTop from "@/components/layout/ScrollToTop";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Features from "./pages/Features";
-import Blog from "./pages/Blog";
 import FAQs from "./pages/FAQs";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
@@ -95,7 +94,6 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/features" element={<Features />} />
-                <Route path="/blog" element={<Blog />} />
                 <Route path="/faqs" element={<FAQs />} />
                 <Route path="/contact" element={<Contact />} />
               </Route>

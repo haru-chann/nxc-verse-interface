@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { Mail, Lock, Eye, EyeOff, User as UserIcon, ArrowRight, Check, Loader2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User as UserIcon, Check, Loader2 } from "lucide-react";
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo, User } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -381,7 +381,6 @@ const Signup = () => {
                 <NeonButton type="submit" className="w-full" disabled={loading}>
                   {loading ? <Loader2 className="animate-spin mr-2" /> : null}
                   Create Account
-                  {!loading && <ArrowRight className="ml-2 w-5 h-5" />}
                 </NeonButton>
               </form>
 

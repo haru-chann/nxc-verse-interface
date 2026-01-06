@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { StatCard } from "@/components/ui/StatCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
-import { Eye, Users, MousePointer, TrendingUp, ArrowUpRight, QrCode, Activity } from "lucide-react";
+import { Eye, Users, MousePointer, TrendingUp, QrCode, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
@@ -136,7 +136,6 @@ const DashboardHome = () => {
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
           >
             View Profile
-            <ArrowUpRight className="w-4 h-4" />
           </motion.div>
         </Link>
       </div>
@@ -262,7 +261,6 @@ const DashboardHome = () => {
               >
                 <action.icon className="w-5 h-5 text-primary" />
                 <span className="text-foreground font-medium">{action.label}</span>
-                <ArrowUpRight className="w-4 h-4 text-muted-foreground ml-auto group-hover:text-primary transition-colors" />
               </Link>
             ))}
           </div>

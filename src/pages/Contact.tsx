@@ -13,39 +13,11 @@ const contactMethods = [
     action: "mailto:nxcbadge@gmail.com",
   },
   {
-    icon: MessageSquare,
-    title: "Live Chat",
-    description: "Chat with our team",
-    value: "Available 24/7",
-    action: "#chat",
-  },
-  {
     icon: Phone,
     title: "Phone",
     description: "Call our support line",
     value: "+919403276942",
     action: "tel:+919403276942",
-  },
-];
-
-const offices = [
-  {
-    city: "San Francisco",
-    address: "100 Market Street, Suite 300",
-    country: "United States",
-    timezone: "PST (UTC-8)",
-  },
-  {
-    city: "London",
-    address: "30 Finsbury Square",
-    country: "United Kingdom",
-    timezone: "GMT (UTC+0)",
-  },
-  {
-    city: "Singapore",
-    address: "1 Raffles Place, Tower 2",
-    country: "Singapore",
-    timezone: "SGT (UTC+8)",
   },
 ];
 
@@ -77,7 +49,7 @@ const Contact = () => {
       {/* Contact Methods */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-6 mb-20">
+          <div className="grid md:grid-cols-2 max-w-4xl mx-auto gap-6 mb-20">
             {contactMethods.map((method, index) => (
               <motion.a
                 key={method.title}
@@ -104,11 +76,11 @@ const Contact = () => {
       {/* Contact Form */}
       <section className="py-20 relative bg-background-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="max-w-3xl mx-auto">
             {/* Form */}
             <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
               <h2 className="text-3xl font-bold font-display text-foreground mb-2">
@@ -179,59 +151,6 @@ const Contact = () => {
                     Send Message
                   </NeonButton>
                 </form>
-              </GlassCard>
-            </motion.div>
-
-            {/* Offices */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-3xl font-bold font-display text-foreground mb-2">
-                Our Offices
-              </h2>
-              <p className="text-muted-foreground mb-8">
-                Visit us at one of our global locations.
-              </p>
-
-              <div className="space-y-6">
-                {offices.map((office) => (
-                  <GlassCard key={office.city} variant="hover" className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Building className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground mb-1">{office.city}</h3>
-                        <p className="text-muted-foreground text-sm mb-2">
-                          {office.address}
-                          <br />
-                          {office.country}
-                        </p>
-                        <p className="text-sm text-primary flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          {office.timezone}
-                        </p>
-                      </div>
-                    </div>
-                  </GlassCard>
-                ))}
-              </div>
-
-              {/* Support Hours */}
-              <GlassCard className="p-6 mt-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
-                    <Headphones className="w-6 h-6 text-success" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-1">24/7 Support</h3>
-                    <p className="text-muted-foreground text-sm">
-                      Our support team is available around the clock to help you with any questions.
-                    </p>
-                  </div>
-                </div>
               </GlassCard>
             </motion.div>
           </div>

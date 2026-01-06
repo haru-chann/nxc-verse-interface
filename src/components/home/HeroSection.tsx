@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { NeonButton } from "../ui/NeonButton";
 import { GradientText } from "../ui/GradientText";
 import { AnimatedCounter } from "../ui/AnimatedCounter";
-import { ArrowRight, Sparkles, Zap, QrCode, Nfc } from "lucide-react";
+import { Sparkles, Zap, QrCode, Nfc } from "lucide-react";
 import { toast } from "sonner";
 
 export const HeroSection = () => {
@@ -71,7 +71,6 @@ export const HeroSection = () => {
               <Link to="/signup">
                 <NeonButton size="lg">
                   Get Your Badge
-                  <ArrowRight className="ml-2 w-5 h-5" />
                 </NeonButton>
               </Link>
               <div onClick={() => toast.info("Coming Soon!!")} className="cursor-pointer">
@@ -82,26 +81,7 @@ export const HeroSection = () => {
             </div>
 
             {/* Stats */}
-            <div className="flex flex-wrap gap-8">
-              <div>
-                <p className="text-3xl font-bold font-display text-foreground">
-                  <AnimatedCounter to={50000} suffix="+" />
-                </p>
-                <p className="text-muted-foreground text-sm">Active Users</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold font-display text-foreground">
-                  <AnimatedCounter to={2} suffix="M+" />
-                </p>
-                <p className="text-muted-foreground text-sm">Connections Made</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold font-display text-foreground">
-                  <AnimatedCounter to={99} suffix="%" />
-                </p>
-                <p className="text-muted-foreground text-sm">Satisfaction</p>
-              </div>
-            </div>
+            {/* Removed stats section as per request */}
           </motion.div>
 
           {/* Right - 3D Card Display */}

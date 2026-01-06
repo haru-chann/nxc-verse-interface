@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { NeonButton } from "../ui/NeonButton";
 import { GradientText } from "../ui/GradientText";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const CTASection = () => {
@@ -61,7 +61,6 @@ export const CTASection = () => {
             <Link to="/signup">
               <NeonButton size="lg">
                 Create Free Profile
-                <ArrowRight className="ml-2 w-5 h-5" />
               </NeonButton>
             </Link>
             <div onClick={() => toast.info("Coming Soon!!")} className="cursor-pointer">

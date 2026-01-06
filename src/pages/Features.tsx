@@ -5,7 +5,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { Link } from "react-router-dom";
 import {
   Nfc, QrCode, BarChart3, Users, Palette, Shield, Zap, Globe,
-  Smartphone, Download, Lock, Layers, Sparkles, ArrowRight, Check
+  Smartphone, Download, Lock, Layers, Sparkles, Check
 } from "lucide-react";
 
 const mainFeatures = [
@@ -63,7 +63,7 @@ const Features = () => {
       <section className="py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-hero" />
         <div className="absolute inset-0 bg-gradient-mesh" />
-        
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center max-w-3xl mx-auto"
@@ -81,7 +81,6 @@ const Features = () => {
             <Link to="/signup">
               <NeonButton size="lg">
                 Get Started Free
-                <ArrowRight className="ml-2 w-5 h-5" />
               </NeonButton>
             </Link>
           </motion.div>
@@ -95,9 +94,8 @@ const Features = () => {
             {mainFeatures.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                className={`flex flex-col lg:flex-row gap-12 items-center ${
-                  index % 2 === 1 ? "lg:flex-row-reverse" : ""
-                }`}
+                className={`flex flex-col lg:flex-row gap-12 items-center ${index % 2 === 1 ? "lg:flex-row-reverse" : ""
+                  }`}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -194,9 +192,6 @@ const Features = () => {
               Join thousands of professionals already using NXC Badge
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link to="/signup">
-                <NeonButton size="lg">Start Free Trial</NeonButton>
-              </Link>
               <Link to="/pricing">
                 <NeonButton variant="outline" size="lg" glow={false}>View Pricing</NeonButton>
               </Link>

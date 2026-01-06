@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -197,7 +197,6 @@ const Login = () => {
               <NeonButton type="submit" className="w-full" disabled={loading}>
                 {loading ? <Loader2 className="animate-spin mr-2" /> : null}
                 Sign In
-                {!loading && <ArrowRight className="ml-2 w-5 h-5" />}
               </NeonButton>
             </form>
 
