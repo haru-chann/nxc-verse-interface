@@ -46,13 +46,13 @@ const Contact = () => {
 
     const subject = `Contact Form: ${topic || "New Message"}`;
 
-    // Gmail Compose URL
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=nxcbadge@gmail.com&su=${encodeURIComponent(
+    // Mailto URL
+    const mailtoUrl = `mailto:nxcbadge@gmail.com?subject=${encodeURIComponent(
       subject
     )}&body=${encodeURIComponent(body)}`;
 
-    // Redirect user to Gmail
-    window.open(gmailUrl, "_blank");
+    // Open default mail client
+    window.location.href = mailtoUrl;
   };
 
   const handleChange = (
