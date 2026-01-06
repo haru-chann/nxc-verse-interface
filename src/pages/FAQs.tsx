@@ -67,11 +67,11 @@ const faqCategories = [
       },
       {
         question: "Can I cancel my subscription anytime?",
-        answer: "Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period. Your profile will revert to free plan features after cancellation.",
+        answer: "There's no subscription involved, it's a one time payment.",
       },
       {
         question: "Do you offer refunds on cards?",
-        answer: "We offer a 30-day satisfaction guarantee on all physical cards. If you're not happy with your card, contact us for a full refund or replacement.",
+        answer: "No refund option available.",
       },
     ],
   },
@@ -138,7 +138,7 @@ const FAQs = () => {
       <section className="py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-hero" />
         <div className="absolute inset-0 bg-gradient-mesh" />
-        
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center max-w-3xl mx-auto"
@@ -180,11 +180,10 @@ const FAQs = () => {
                   <button
                     key={category.name}
                     onClick={() => setSelectedCategory(category.name)}
-                    className={`w-full text-left px-4 py-3 rounded-xl transition-all ${
-                      selectedCategory === category.name
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-all ${selectedCategory === category.name
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     {category.name}
                   </button>

@@ -25,13 +25,13 @@ const mainFeatures = [
     icon: Palette,
     title: "Profile Customization",
     description: "Design your digital identity with stunning themes, custom colors, and layouts.",
-    details: ["50+ themes", "Custom wallpapers", "Section ordering", "Font choices"],
+    details: ["Custom themes", "Custom wallpapers", "Section ordering", "Custom Profile Banners"],
   },
   {
     icon: BarChart3,
     title: "Advanced Analytics",
     description: "Track every profile view, tap, and interaction with detailed insights.",
-    details: ["Real-time data", "Geographic insights", "Device breakdown", "Time analysis"],
+    details: ["Real-time data", "Geographic insights", "Time analysis"],
   },
   {
     icon: Users,
@@ -43,7 +43,7 @@ const mainFeatures = [
     icon: Shield,
     title: "Privacy Controls",
     description: "Control who sees what with PIN-protected sections and visibility settings.",
-    details: ["PIN lock", "Section privacy", "Link expiry", "View limits"],
+    details: ["PIN lock", "Section privacy", "View limits"],
   },
 ];
 
@@ -51,7 +51,6 @@ const additionalFeatures = [
   { icon: Smartphone, title: "Mobile Optimized", description: "Perfect experience on any device" },
   { icon: Download, title: "Easy Export", description: "Download contacts in any format" },
   { icon: Lock, title: "Secure", description: "Enterprise-grade encryption" },
-  { icon: Layers, title: "Integrations", description: "Connect with your tools" },
   { icon: Globe, title: "Global CDN", description: "Fast loading worldwide" },
   { icon: Zap, title: "Instant Updates", description: "Changes reflect immediately" },
 ];
@@ -157,7 +156,7 @@ const Features = () => {
             </h2>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
             {additionalFeatures.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -165,8 +164,9 @@ const Features = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
+                className="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]"
               >
-                <GlassCard variant="hover" className="p-6">
+                <GlassCard variant="hover" className="p-6 h-full">
                   <feature.icon className="w-8 h-8 text-primary mb-4" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
                   <p className="text-muted-foreground text-sm">{feature.description}</p>

@@ -11,22 +11,16 @@ export const CTASection = () => {
       {/* Background Effects */}
       <div className="absolute inset-0">
         <motion.div
-          className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[150px]"
-          style={{ willChange: "transform, opacity" }}
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{ duration: 6, repeat: Infinity }}
+          className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px]"
+          initial={{ opacity: 0.3 }}
+          animate={{ opacity: [0.3, 0.4, 0.3] }}
+          transition={{ duration: 5, repeat: Infinity }}
         />
         <motion.div
-          className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[150px]"
-          style={{ willChange: "transform, opacity" }}
-          animate={{
-            scale: [1.3, 1, 1.3],
-            opacity: [0.5, 0.3, 0.5],
-          }}
-          transition={{ duration: 6, repeat: Infinity }}
+          className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[120px]"
+          initial={{ opacity: 0.3 }}
+          animate={{ opacity: [0.3, 0.4, 0.3] }}
+          transition={{ duration: 5, repeat: Infinity, delay: 2.5 }}
         />
       </div>
 
@@ -76,13 +70,15 @@ export const CTASection = () => {
               <div className="w-2 h-2 rounded-full bg-success" />
               No credit card required
             </div>
+
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success" />
-              Free forever plan
+              Free Digital Profile
             </div>
+
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success" />
-              Cancel anytime
+              Connect anytime, anywhere
             </div>
           </div>
         </motion.div>

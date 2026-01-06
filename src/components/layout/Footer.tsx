@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Twitter, Linkedin, Instagram, Github, Mail, MapPin, Phone } from "lucide-react";
+import { Twitter, Linkedin, Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 const handleShopClick = (e: React.MouseEvent) => {
@@ -50,11 +50,11 @@ export const Footer = () => {
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-6">
               <motion.div
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center"
-                whileHover={{ rotate: 180 }}
+                className="w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden"
+                whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.3 }}
               >
-                <span className="text-primary-foreground font-bold text-lg">N</span>
+                <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
               </motion.div>
               <span className="font-display text-xl font-bold text-foreground">
                 NXC <span className="text-primary">Badge</span>

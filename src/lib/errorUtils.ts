@@ -23,7 +23,7 @@ export const getFriendlyErrorMessage = (error: any): string => {
         case "auth/requires-recent-login":
             return "For security reasons, please log out and log in again to perform this action.";
         case "auth/popup-closed-by-user":
-            return "Sign-in popup was closed before completion.";
+            return "Google sign-in was cancelled.";
         case "auth/account-exists-with-different-credential":
             return "An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.";
         default:

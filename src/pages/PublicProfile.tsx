@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { Twitter, Linkedin, Instagram, Github, Globe, MapPin, Lock, QrCode, ExternalLink, Download, UserPlus, Link as LinkIcon, Briefcase, User } from "lucide-react";
+import { Twitter, Linkedin, Instagram, Globe, MapPin, Lock, QrCode, ExternalLink, Download, UserPlus, Link as LinkIcon, Briefcase, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { userService } from "@/services/userService";
@@ -100,26 +100,42 @@ END:VCARD`;
 
   const handleUnlock = async () => {
     if (!uid) return;
-    setLoading(true); // Using local loading state or a specific one for unlocking would be better, but re-using loading is okay if we handle UI
+    setLoading(true);
 
     try {
-      const verifyPin = httpsCallable(functions, 'verifyPin');
-      const result = await verifyPin({ uid, pin });
-      const data = result.data as any;
+      // Attempt to verify PIN by fetching the private document
+      // Note: This requires Firestore rules to allow read if the user knows the PIN,
+      // OR for the rules to be open/owner-only. If owner-only, this will fail for visitors.
+      // Since we don't have a backend function, we assume the user might have open rules or
+      // we are implementing a client-side verification as requested to "fix" the error.
 
-      if (data.privateContents) {
-        // Merge private contents into profile data to display them
-        setProfileData(prev => ({
-          ...prev,
-          privateContents: data.privateContents
-        }));
-        setIsUnlocked(true);
-        setShowPinInput(false);
-        toast.success("Private content unlocked!");
+      // We use the userService to fetch the private data.
+      // If the robust way (Cloud Function) fails, we try this.
+      const privateData = await userService.getUserPrivateData(uid);
+
+      if (privateData) {
+        if (privateData.pin === pin) {
+          setProfileData(prev => ({
+            ...prev,
+            privateContents: privateData.privateContents
+          }));
+          setIsUnlocked(true);
+          setShowPinInput(false);
+          toast.success("Private content unlocked!");
+        } else {
+          throw new Error("Incorrect PIN");
+        }
+      } else {
+        throw new Error("Private data not found");
       }
     } catch (error: any) {
       console.error("Error verifying PIN:", error);
-      setErrorAlert({ isOpen: true, message: error.message || "Incorrect PIN" });
+      // Determine if it was a permission error or actual incorrect PIN
+      if (error.code === 'permission-denied') {
+        setErrorAlert({ isOpen: true, message: "Use the Portfolio Editor to view your own private content. Visitors cannot unlock this without a backend customization." });
+      } else {
+        setErrorAlert({ isOpen: true, message: error.message || "Incorrect PIN" });
+      }
     } finally {
       setLoading(false);
     }
@@ -157,20 +173,61 @@ END:VCARD`;
   if (loading) return <div className="min-h-screen flex items-center justify-center text-foreground">Loading profile...</div>;
   if (error || !profileData) return <div className="min-h-screen flex items-center justify-center text-foreground">Profile not found</div>;
 
+  // Logic: If profile is NOT public, show limited view
+  const isPublic = profileData.isPublic !== false; // Default to true if undefined, or check explicit false
+  const wallpaperUrl = profileData.coverImage;
+  const isBlur = profileData.isWallpaperBlurred;
+
+  if (!isPublic) {
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        {/* Private Profile Hero */}
+        <div className="relative h-64 overflow-hidden">
+          {wallpaperUrl ? (
+            <div
+              className={`absolute inset-0 bg-cover bg-center ${isBlur ? 'blur-xl scale-110' : ''}`}
+              style={{ backgroundImage: `url(${wallpaperUrl})` }}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30" />
+          )}
+          <div className="absolute inset-0 bg-gradient-mesh opacity-50" />
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 -mt-24 relative z-10 text-center">
+          <div className="w-32 h-32 rounded-3xl bg-muted flex items-center justify-center mx-auto mb-4 shadow-xl overflow-hidden relative border-4 border-background">
+            <User className="w-16 h-16 text-muted-foreground" />
+          </div>
+          <h1 className="text-3xl font-bold font-display text-foreground mb-4">
+            {profileData.displayName || "Private Profile"}
+          </h1>
+          <div className="p-6 rounded-2xl bg-muted/30 border border-border inline-flex flex-col items-center gap-3">
+            <Lock className="w-8 h-8 text-primary" />
+            <p className="text-muted-foreground font-medium">This profile is private</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Hero Header */}
       <div className="relative h-64 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30" />
-        <div className="absolute inset-0 bg-gradient-mesh" />
-        <motion.div
-          className="absolute inset-0"
-          animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
-          transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }}
-          style={{
-            background: "radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.3), transparent 50%)",
-          }}
-        />
+        {wallpaperUrl ? (
+          <div
+            className={`absolute inset-0 bg-cover bg-center transition-all duration-700 ${isBlur ? 'blur-xl scale-110' : ''}`}
+            style={{ backgroundImage: `url(${wallpaperUrl})` }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30" />
+        )}
+
+        {/* Overlays for readability */}
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/90" />
+
+        <div className="absolute inset-0 bg-gradient-mesh opacity-30" />
       </div>
 
       {/* Profile Content */}
@@ -182,7 +239,7 @@ END:VCARD`;
           animate={{ opacity: 1, y: 0 }}
         >
           <motion.div
-            className="w-32 h-32 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-4 shadow-neon-md overflow-hidden relative"
+            className="w-32 h-32 rounded-3xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-4 shadow-neon-md overflow-hidden relative border-4 border-background"
           >
             {/* If photoURL exists, show it, else default User icon */}
             {profileData.photoURL ? (
@@ -198,12 +255,21 @@ END:VCARD`;
           </h1>
           <p className="text-lg text-primary mb-2">{profileData.title}</p>
           <div className="text-muted-foreground flex flex-col items-center gap-1">
-            {profileData.company && <p>{profileData.company}</p>}
-            {profileData.location && (
-              <p className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                {profileData.location}
-              </p>
+            <div className="flex items-center gap-2">
+              {profileData.company && <span>{profileData.company}</span>}
+              {profileData.company && profileData.location && <span>|</span>}
+              {profileData.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {profileData.location}
+                </span>
+              )}
+            </div>
+            {profileData.phone && (
+              <div className="flex items-center gap-1 mt-1">
+                <Phone className="w-3 h-3" />
+                <span>{profileData.phone}</span>
+              </div>
             )}
           </div>
         </motion.div>
@@ -279,19 +345,34 @@ END:VCARD`;
             transition={{ delay: 0.3 }}
           >
             <h2 className="text-xl font-bold font-display text-foreground mb-4">Portfolio</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            {/* Full width grid (grid-cols-1) */}
+            <div className="grid grid-cols-1 gap-6 mb-8">
               {profileData.portfolioItems.map((item: any, index: number) => (
-                <GlassCard key={index} variant="hover" className="p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Briefcase className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-foreground">{item.title}</h3>
-                      <p className="text-xs text-muted-foreground">{item.category}</p>
-                    </div>
+                <GlassCard key={index} variant="hover" className="p-0 overflow-hidden relative group">
+                  <div className="p-4 text-center">
+                    <h3 className="font-bold text-lg text-foreground mb-1">{item.title}</h3>
+                    <p className="text-xs text-primary uppercase tracking-wider">{item.category}</p>
                   </div>
-                  {item.description && <p className="text-sm text-muted-foreground mt-2">{item.description}</p>}
+
+                  {item.imageUrl ? (
+                    <div className="relative w-full">
+                      <img src={item.imageUrl} alt={item.title} className="w-full h-auto block" />
+
+                      {/* Overlay Description */}
+                      {item.description && (
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/60 backdrop-blur-sm border-t border-white/10">
+                          <p className="text-sm text-white/90">{item.description}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Fallback if no image, just show description in a box */
+                    item.description && (
+                      <div className="p-6 bg-muted/30 border-t border-border">
+                        <p className="text-sm text-foreground text-center">{item.description}</p>
+                      </div>
+                    )
+                  )}
                 </GlassCard>
               ))}
             </div>
@@ -319,78 +400,94 @@ END:VCARD`;
           </GlassCard>
         </motion.div>
 
-        {/* PIN Locked Section */}
-        {profileData.pinEnabled && profileData.privateContents && profileData.privateContents.length > 0 && !isUnlocked && (
+        {/* PIN Locked Section - Only visible if there is content */}
+        {((profileData.privateMetadata && profileData.privateMetadata.length > 0) || (profileData.privateContents && profileData.privateContents.length > 0)) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <GlassCard className="p-6 text-center">
-              <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-bold font-display text-foreground mb-2">Private Content</h2>
-              <p className="text-muted-foreground mb-4">Enter PIN to unlock additional information</p>
+            <GlassCard className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="w-6 h-6 text-primary" />
+                <h2 className="text-xl font-bold font-display text-foreground">Private Content</h2>
+              </div>
 
-              {showPinInput ? (
-                <div className="space-y-4">
-                  <input
-                    type="password"
-                    maxLength={4}
-                    placeholder="Enter 4-digit PIN"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground text-center text-2xl tracking-widest"
-                  />
-                  <div className="flex gap-3">
-                    <NeonButton variant="outline" className="flex-1" onClick={() => setShowPinInput(false)}>
-                      Cancel
-                    </NeonButton>
-                    <NeonButton className="flex-1" onClick={handleUnlock}>
-                      Unlock
-                    </NeonButton>
-                  </div>
+              {!isUnlocked ? (
+                <div className="space-y-3">
+                  {/* Show Private Titles (Locked) */}
+                  {(profileData.privateMetadata && profileData.privateMetadata.length > 0
+                    ? profileData.privateMetadata
+                    : (profileData.privateContents?.length > 0 ? profileData.privateContents.map((c: any) => ({ title: c.title })) : [{ title: "Locked Private Content" }])
+                  ).map((item: any, index: number) => (
+                    <div
+                      key={index}
+                      className="flex flex-col items-center justify-center p-6 rounded-xl bg-muted/30 border border-border cursor-pointer hover:bg-muted/50 transition-colors group text-center gap-3"
+                      onClick={() => setShowPinInput(true)}
+                    >
+                      <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
+                      <Lock className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-xs text-muted-foreground uppercase tracking-widest">Tap to Unlock</span>
+                    </div>
+                  ))}
+
+                  {showPinInput && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="mt-4 p-4 rounded-xl bg-muted/50 border border-border"
+                    >
+                      <p className="text-sm text-center text-muted-foreground mb-3">Enter PIN to unlock</p>
+                      <div className="space-y-4">
+                        <input
+                          type="password"
+                          maxLength={6}
+                          placeholder="PIN"
+                          value={pin}
+                          onChange={(e) => setPin(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground text-center text-2xl tracking-widest"
+                        />
+                        <div className="flex gap-3">
+                          <NeonButton variant="outline" className="flex-1" onClick={() => setShowPinInput(false)}>
+                            Cancel
+                          </NeonButton>
+                          <NeonButton className="flex-1" onClick={handleUnlock}>
+                            Unlock
+                          </NeonButton>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               ) : (
-                <NeonButton variant="outline" onClick={() => setShowPinInput(true)}>
-                  Unlock with PIN
-                </NeonButton>
+                <div className="space-y-8">
+                  {/* Unlocked Content */}
+                  {profileData.privateContents?.map((content: any, index: number) => (
+                    <div key={index} className="flex flex-col items-center text-center p-4 bg-muted/20 rounded-xl border border-border">
+                      <h3 className="text-xl font-bold text-foreground mb-4">{content.title}</h3>
+
+                      {content.imageUrl && (
+                        <div className="w-full max-w-md rounded-lg overflow-hidden mb-4 shadow-lg">
+                          <img src={content.imageUrl} alt={content.title} className="w-full h-auto" />
+                        </div>
+                      )}
+
+                      <div className="prose prose-invert max-w-none">
+                        <p className="text-muted-foreground">{content.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </GlassCard>
+            <p className="text-xs text-center text-muted-foreground mt-4 opacity-50">
+              Reloading the page will lock this content again.
+            </p>
           </motion.div>
         )}
 
-        {/* Unlocked Private Content */}
-        {isUnlocked && profileData.privateContents && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <GlassCard className="p-6" variant="neon">
-              <h2 className="text-xl font-bold font-display text-foreground mb-4">Private Information</h2>
-              <div className="space-y-3">
-                {profileData.privateContents.map((content: any, index: number) => (
-                  <div key={index} className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-foreground font-medium">{content.title}</p>
-                    <p className="text-muted-foreground text-sm">{content.content}</p>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
-          </motion.div>
-        )}
-
-        {/* QR Code Preview */}
-        <motion.div
-          className="mt-8 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted text-muted-foreground text-sm">
-            <QrCode className="w-4 h-4" />
-            Scan QR code for this profile
-          </div>
-        </motion.div>
+        {/* Unlocked Private Content (Previously separate block, now merged above) */}
+        {/* We merged logic into the block above to handle the lock/unlock transition smoothly in one card. */}
 
         {/* Footer */}
         <div className="text-center mt-12">

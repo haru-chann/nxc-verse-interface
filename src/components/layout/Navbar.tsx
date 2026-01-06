@@ -9,6 +9,7 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "About", path: "/about" },
   { name: "Features", path: "/features" },
+  { name: "Pricing", path: "/pricing" },
   { name: "FAQs", path: "/faqs" },
   { name: "Contact", path: "/contact" },
 ];
@@ -45,11 +46,11 @@ export const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <motion.div
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center"
-              whileHover={{ rotate: 180, scale: 1.1 }}
+              className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden"
+              whileHover={{ scale: 1.1 }}
               transition={{ duration: 0.3 }}
             >
-              <span className="text-primary-foreground font-bold text-lg">N</span>
+              <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
             </motion.div>
             <span className="font-display text-xl font-bold text-foreground">
               NXC <span className="text-primary">Badge</span>

@@ -47,11 +47,11 @@ export const DashboardSidebar = ({ collapsed, onToggle }: DashboardSidebarProps)
         <div className="h-20 flex items-center justify-between px-4 border-b border-sidebar-border">
           <Link to="/dashboard" className="flex items-center gap-3">
             <motion.div
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0"
-              whileHover={{ rotate: 180 }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+              whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.3 }}
             >
-              <span className="text-primary-foreground font-bold text-lg">N</span>
+              <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
             </motion.div>
             <AnimatePresence>
               {!collapsed && (

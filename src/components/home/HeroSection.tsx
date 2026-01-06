@@ -16,35 +16,29 @@ export const HeroSection = () => {
 
       {/* Floating Orbs */}
       <motion.div
-        className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[128px]"
-        style={{ willChange: "transform, opacity" }}
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
-        }}
-        transition={{ duration: 8, repeat: Infinity }}
+        className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[100px]"
+        initial={{ opacity: 0.3 }}
+        animate={{ opacity: [0.3, 0.4, 0.3] }}
+        transition={{ duration: 5, repeat: Infinity }}
       />
       <motion.div
-        className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[128px]"
-        style={{ willChange: "transform, opacity" }}
-        animate={{
-          scale: [1.2, 1, 1.2],
-          opacity: [0.5, 0.3, 0.5],
-        }}
-        transition={{ duration: 8, repeat: Infinity }}
+        className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[100px]"
+        initial={{ opacity: 0.3 }}
+        animate={{ opacity: [0.3, 0.4, 0.3] }}
+        transition={{ duration: 5, repeat: Infinity, delay: 2.5 }}
       />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left Content */}
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
           >
             {/* Badge */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8"
@@ -86,43 +80,35 @@ export const HeroSection = () => {
 
           {/* Right - 3D Card Display */}
           <motion.div
-            initial={{ opacity: 0, x: 50 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             className="relative flex items-center justify-center"
           >
             {/* Glow Background */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <motion.div
-                className="w-80 h-80 bg-primary/30 rounded-full blur-[100px]"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 4, repeat: Infinity }}
-              />
+              <div className="w-80 h-80 bg-primary/20 rounded-full blur-[80px]" />
             </div>
 
             {/* Main Card */}
             <motion.div
               className="relative z-10"
-              animate={{ y: [0, -20, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
               <div className="metal-card w-80 h-48 p-6 relative overflow-hidden group cursor-pointer card-3d">
                 {/* Card Shine */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-50" />
 
                 {/* NFC Icon */}
-                <motion.div
-                  className="absolute top-4 right-4"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <Nfc className="w-8 h-8 text-primary" />
-                </motion.div>
+                <div className="absolute top-4 right-4 text-primary/80">
+                  <Nfc className="w-8 h-8" />
+                </div>
 
                 {/* QR Code */}
                 <motion.div
                   className="absolute bottom-4 right-4 p-2 bg-white rounded-lg"
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={{ scale: 1.05 }}
                 >
                   <QrCode className="w-12 h-12 text-background" />
                 </motion.div>
@@ -135,17 +121,14 @@ export const HeroSection = () => {
                     <p className="text-sm text-muted-foreground">Product Designer</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-success/80" />
                     <span className="text-xs text-muted-foreground">Active</span>
                   </div>
                 </div>
 
                 {/* Edge Glow Effect */}
-                <motion.div
-                  className="absolute inset-0 rounded-2xl border-2 border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{
-                    boxShadow: "0 0 20px hsl(var(--primary) / 0.5), inset 0 0 20px hsl(var(--primary) / 0.1)",
-                  }}
+                <div
+                  className="absolute inset-0 rounded-2xl border-2 border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 />
               </div>
             </motion.div>
@@ -153,15 +136,15 @@ export const HeroSection = () => {
             {/* Floating Elements */}
             <motion.div
               className="absolute -top-8 -left-8 p-4 glass-card rounded-2xl"
-              animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
-              transition={{ duration: 5, repeat: Infinity, delay: 0.5 }}
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
             >
               <Zap className="w-6 h-6 text-primary" />
             </motion.div>
             <motion.div
               className="absolute -bottom-8 -right-8 p-4 glass-card rounded-2xl"
-              animate={{ y: [0, 10, 0], rotate: [0, -5, 0] }}
-              transition={{ duration: 5, repeat: Infinity, delay: 1 }}
+              animate={{ y: [0, 5, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: 1 }}
             >
               <QrCode className="w-6 h-6 text-accent" />
             </motion.div>

@@ -35,10 +35,11 @@ const values = [
 ];
 
 const team = [
-  { name: "Ritesh Martawar", role: "Founder & Developer", avatar: "AR" },
-  { name: "Vishal Pandey", role: "Co-Founder & Developer", avatar: "JL" },
-  { name: "Ishaan Apte", role: "Designer", avatar: "SC" },
-  { name: "Meghant Darji", role: "Product Head", avatar: "MT" },
+  { name: "Ritesh Martawar", role: "Founder & Developer", avatar: "RM" }, // Correcting AR -> RM (Assumption, or keeping consistency?) 
+  { name: "Vishal Pandey", role: "Co-Founder & Developer", avatar: "VP" }, // JL -> VP
+  { name: "Ishaan Apte", role: "Designer", avatar: "IA" }, // SC -> IA
+  { name: "Meghant Darji", role: "Product Head", avatar: "MD" }, // MT -> MD
+  { name: "Saksham Jiddewar", role: "Marketing Strategist", avatar: "SJ" },
 ];
 
 const About = () => {
@@ -71,46 +72,27 @@ const About = () => {
 
       {/* Story Section */}
       <section className="py-32 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="font-display text-4xl font-bold mb-6">
-                Our <GradientText>Story</GradientText>
-              </h2>
-              <div className="space-y-4 text-muted-foreground">
-                <p>
-                  NXC Badge Verse was born from a simple frustration: the traditional business card was dead, but nothing had truly replaced it for the digital age.
-                </p>
-                <p>
-                  Founded in 2024, we set out to create a platform that combines the elegance of premium materials with the power of digital technology. Our metal NFC cards aren't just business cards—they're a statement.
-                </p>
-                <p>
-                  Today, we serve over 50,000 professionals worldwide, helping them make lasting impressions and meaningful connections every single day.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <GlassCard className="p-8 aspect-square flex items-center justify-center">
-                <motion.div
-                  className="text-9xl font-bold font-display text-primary/20"
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                >
-                  NXC
-                </motion.div>
-              </GlassCard>
-            </motion.div>
-          </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="font-display text-5xl sm:text-6xl font-bold mb-12">
+              Our <GradientText>Story</GradientText>
+            </h2>
+            <div className="prose prose-lg dark:prose-invert mx-auto space-y-8">
+              <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground">
+                NXC Badge Verse was born in November 2024 from one fearless idea — professional identity should feel powerful, futuristic, and alive.
+              </p>
+              <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground">
+                Built by students with ambition that refuses to shrink, we created a digital visiting card platform engineered like a blockbuster: precise, immersive, and built to last.
+              </p>
+              <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground">
+                Led by Ritesh Martawar with the strength of Vishal Pandey, Ishaan Apte, and Meghant Darji, this isn’t just tech. It’s a statement. And it’s only the beginning.
+              </p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -173,7 +155,8 @@ const About = () => {
             <p className="text-xl text-muted-foreground">The people building the future</p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Changed from grid to flex-wrap to center 5 items nicely */}
+          <div className="flex flex-wrap justify-center gap-8">
             {team.map((member, index) => (
               <motion.div
                 key={member.name}
@@ -181,6 +164,7 @@ const About = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
+                className="w-full sm:w-[calc(50%-1rem)] lg:w-[calc(25%-1.5rem)] max-w-xs"
               >
                 <GlassCard variant="hover" className="p-6 text-center">
                   <motion.div
