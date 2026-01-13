@@ -57,11 +57,11 @@ export const CTASection = () => {
                 Create Free Profile
               </NeonButton>
             </Link>
-            <div onClick={() => toast.info("Coming Soon!!")} className="cursor-pointer">
+            <Link to="/pricing">
               <NeonButton variant="outline" size="lg" glow={false}>
                 Shop Premium Cards
               </NeonButton>
-            </div>
+            </Link>
           </div>
 
           {/* Trust Badges */}
