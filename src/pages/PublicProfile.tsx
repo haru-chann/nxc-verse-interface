@@ -5,17 +5,36 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { Twitter, Linkedin, Instagram, Globe, MapPin, Lock, QrCode, ExternalLink, Download, UserPlus, Link as LinkIcon, Briefcase, User, Phone } from "lucide-react";
-import { toast } from "sonner";
+import {
+  Download, UserPlus, Link as LinkIcon, Briefcase, User, Phone, Building, Mail, Crown, MoreVertical, Flag, AlertTriangle, MapPin, Lock, ExternalLink
+} from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { userService } from "@/services/userService";
 import { interactionService } from "@/services/interactionService";
-import { functions } from "@/lib/firebase";
-import { httpsCallable } from "firebase/functions";
+import { collection, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const PublicProfile = () => {
   const { uid } = useParams();
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [profileData, setProfileData] = useState<any>(null);
@@ -26,20 +45,62 @@ const PublicProfile = () => {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pin, setPin] = useState("");
   const [showPinInput, setShowPinInput] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-
-  // Only message state needed now
+  // Replaced simple boolean with action string for smarter redirects
+  const [loginPromptAction, setLoginPromptAction] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  // Log View on Mount
+  // Report System State
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportReasons, setReportReasons] = useState<string[]>([]);
+  const [reportDescription, setReportDescription] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
+  const REPORT_REASONS = [
+    "Inappropriate Content",
+    "Spam or Scam",
+    "Harassment or Bullying",
+    "Impersonation",
+    "Other"
+  ];
+
+  const isOwnProfile = currentUser?.uid === uid;
 
   // Log View on Mount
   useEffect(() => {
-    if (uid) {
-      interactionService.logInteraction(uid, "view", { source: 'web' });
+    if (uid && !authLoading) {
+      // Don't log views from the profile owner
+      if (currentUser?.uid === uid) return;
+
+      const visitorData = currentUser ? {
+        visitorId: currentUser.uid,
+        name: currentUser.displayName || "Anonymous User",
+        email: currentUser.email,
+        source: 'web'
+      } : { source: 'web' };
+
+      interactionService.logInteraction(uid, "view", visitorData);
     }
-  }, [uid]);
+  }, [uid, currentUser, authLoading]);
+
+  // Handle Redirect Actions (e.g. after login)
+  useEffect(() => {
+    if (!authLoading && currentUser && !loading) {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get("action");
+
+      if (action === "report") {
+        // Clear param to prevent loop/re-open? 
+        // handleReportOpen(); // Reuse logic
+        setIsReportOpen(true);
+      } else if (action === "message") {
+        const contactElement = document.getElementById("contact-form");
+        if (contactElement) {
+          contactElement.scrollIntoView({ behavior: "smooth" });
+          toast({ title: "Ready to Message", description: "You can now send your message." });
+        }
+      }
+    }
+  }, [authLoading, currentUser, loading]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -47,6 +108,11 @@ const PublicProfile = () => {
       try {
         const data = await userService.getUserProfile(uid);
         if (data) {
+          // If user is banned, hide their profile completely (act as 404)
+          if (data.isBanned) {
+            setError("Page Not Found");
+            return;
+          }
           setProfileData(data);
         } else {
           setError("Profile not found");
@@ -65,37 +131,55 @@ const PublicProfile = () => {
     loadProfile();
   }, [uid]);
 
-  const handleSaveContact = () => {
-    if (!profileData) return;
+  const handleSaveContact = async () => {
+    if (!profileData || !uid) return;
 
-    // Log interaction
-    if (uid) {
-      interactionService.logInteraction(uid, "contact_saved");
+    if (!currentUser) {
+      setLoginPromptAction("save_contact");
+      return;
     }
 
-    // Generate VCard format
-    const vcard = `BEGIN:VCARD
-VERSION:3.0
-FN:${profileData.firstName || ""} ${profileData.lastName || ""}
-N:${profileData.lastName || ""};${profileData.firstName || ""};;;
-TITLE:${profileData.title || ""}
-ORG:${profileData.company || ""}
-EMAIL:${profileData.email || ""}
-TEL:${profileData.phone || ""}
-NOTE:${profileData.bio || ""}
-END:VCARD`;
+    try {
+      setLoading(true); // Re-use loading state or add a local one if needed, but safe to use basic loading for short op
 
-    const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${profileData.firstName || "contact"}_${profileData.lastName || "info"}.vcf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      // 1. Save to Current User's Contacts
+      const contactData = {
+        name: profileData.displayName || `${profileData.firstName} ${profileData.lastName}`,
+        email: profileData.email || "",
+        phone: profileData.phone || "",
+        company: profileData.company || "",
+        title: profileData.title || "",
+        location: profileData.location || "",
+        photoURL: profileData.photoURL || "",
+        originalProfileId: uid,
+        savedAt: serverTimestamp(),
+        source: "web_profile"
+      };
 
-    toast.success("Contact saved to your device!");
+      await setDoc(doc(db, "users", currentUser.uid, "contacts", uid), contactData);
+
+      // 2. Log Interaction for the Profile Owner
+      await interactionService.logInteraction(uid, "contact_saved", {
+        savedBy: currentUser.uid,
+        name: currentUser.displayName || "Anonymous",
+        email: currentUser.email
+      });
+
+      toast({
+        title: "Saved",
+        description: "Contact saved to your Dashboard check your contacts!",
+      });
+
+    } catch (error) {
+      console.error("Error saving contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save contact",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUnlock = async () => {
@@ -103,30 +187,23 @@ END:VCARD`;
     setLoading(true);
 
     try {
-      // Attempt to verify PIN by fetching the private document
-      // Note: This requires Firestore rules to allow read if the user knows the PIN,
-      // OR for the rules to be open/owner-only. If owner-only, this will fail for visitors.
-      // Since we don't have a backend function, we assume the user might have open rules or
-      // we are implementing a client-side verification as requested to "fix" the error.
-
-      // We use the userService to fetch the private data.
-      // If the robust way (Cloud Function) fails, we try this.
-      const privateData = await userService.getUserPrivateData(uid);
+      // Attempt to verify PIN by fetching the specific document with PIN as ID
+      // This works because Firestore rules allow getting a document if you know its ID
+      const privateData = await userService.getPrivateDataByPin(uid, pin);
 
       if (privateData) {
-        if (privateData.pin === pin) {
-          setProfileData(prev => ({
-            ...prev,
-            privateContents: privateData.privateContents
-          }));
-          setIsUnlocked(true);
-          setShowPinInput(false);
-          toast.success("Private content unlocked!");
-        } else {
-          throw new Error("Incorrect PIN");
-        }
+        setProfileData(prev => ({
+          ...prev,
+          privateContents: privateData.privateContents
+        }));
+        setIsUnlocked(true);
+        setShowPinInput(false);
+        toast({
+          title: "Unlocked",
+          description: "Private content unlocked!",
+        });
       } else {
-        throw new Error("Private data not found");
+        throw new Error("Incorrect PIN");
       }
     } catch (error: any) {
       console.error("Error verifying PIN:", error);
@@ -145,7 +222,7 @@ END:VCARD`;
     e.preventDefault();
 
     if (!currentUser) {
-      setShowLoginPrompt(true);
+      setLoginPromptAction("message");
       return;
     }
 
@@ -163,10 +240,119 @@ END:VCARD`;
         name: currentUser.displayName || "Anonymous User",
         senderId: currentUser.uid // Traceability
       });
-      toast.success("Message sent successfully!");
+      toast({
+        title: "Sent",
+        description: "Message sent successfully!",
+      });
       setMessage("");
     } catch (err) {
       setErrorAlert({ isOpen: true, message: "Failed to send message" });
+    }
+  };
+
+  const handleReportOpen = async () => {
+    if (!currentUser) {
+      setLoginPromptAction("report");
+      return;
+    }
+
+    // Check if simple user (not handling block check here yet, doing it on action or optimistic)
+    // But per requirement: "when a user tries again to report the user should see that he already reported"
+
+    if (!uid) return;
+
+    try {
+      setLoading(true);
+      // Check existing report using deterministic ID
+      const reportId = `${currentUser.uid}_${uid}`;
+      const reportRef = doc(db, "reports", reportId);
+      const reportSnap = await getDoc(reportRef);
+
+      if (reportSnap.exists()) {
+        toast({
+          title: "Already Reported",
+          description: "You have already submitted a report for this user.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      setIsReportOpen(true);
+    } catch (error) {
+      console.error("Error checking report status:", error);
+      setLoading(false);
+      // If permission denied (cannot read reports), we might assume they haven't reported or just let them try and fail on write?
+      // But for better UX let's open dialog. Firestore rules should allow 'get' on own report.
+      setIsReportOpen(true);
+    }
+  };
+
+  const toogleReason = (reason: string) => {
+    setReportReasons(prev =>
+      prev.includes(reason)
+        ? prev.filter(r => r !== reason)
+        : [...prev, reason]
+    );
+  };
+
+  const handleSubmitReport = async () => {
+    if (!uid || !currentUser) return;
+
+    if (reportReasons.length === 0) {
+      toast({
+        title: "Reason Required",
+        description: "Please select at least one reason for reporting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (reportDescription.length > 200) {
+      toast({
+        title: "Description too long",
+        description: "Please keep description under 200 characters.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmittingReport(true);
+
+    try {
+      const reportId = `${currentUser.uid}_${uid}`;
+      const reportData = {
+        reporterId: currentUser.uid,
+        reportedUserId: uid,
+        reporterName: currentUser.displayName || "Anonymous", // Helpful for admin
+        reportedUserName: profileData.displayName || "Unknown",
+        reasons: reportReasons,
+        description: reportDescription,
+        status: "pending",
+        createdAt: serverTimestamp()
+      };
+
+      await setDoc(doc(db, "reports", reportId), reportData);
+
+      toast({
+        title: "Report Submitted",
+        description: "Thank you. We will review your report shortly.",
+      });
+
+      setIsReportOpen(false);
+      setReportReasons([]);
+      setReportDescription("");
+
+    } catch (error) {
+      console.error("Report submission error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit report. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -178,9 +364,16 @@ END:VCARD`;
   const wallpaperUrl = profileData.coverImage;
   const isBlur = profileData.isWallpaperBlurred;
 
+  // Visuals from Plan
+  const hasGoldRing = profileData?.visuals?.goldRing;
+  const hasRoyalTexture = profileData?.visuals?.royalTexture;
+  const hasCustomBranding = profileData?.visuals?.customBranding;
+
   if (!isPublic) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className={`min-h-screen bg-background pb-20 ${hasRoyalTexture ? 'bg-texture-gold' : ''}`}>
+        {hasRoyalTexture && <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/gold-scale.png')] opacity-[0.05] pointer-events-none z-0" />}
+
         {/* Private Profile Hero */}
         <div className="relative h-64 overflow-hidden">
           {wallpaperUrl ? (
@@ -195,8 +388,9 @@ END:VCARD`;
         </div>
 
         <div className="max-w-2xl mx-auto px-4 -mt-24 relative z-10 text-center">
-          <div className="w-32 h-32 rounded-3xl bg-muted flex items-center justify-center mx-auto mb-4 shadow-xl overflow-hidden relative border-4 border-background">
+          <div className={`w-32 h-32 rounded-3xl bg-muted flex items-center justify-center mx-auto mb-4 shadow-xl overflow-hidden relative border-4 ${hasGoldRing ? 'border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)]' : 'border-background'}`}>
             <User className="w-16 h-16 text-muted-foreground" />
+            {hasGoldRing && <div className="absolute inset-0 border-2 border-yellow-500 rounded-3xl animate-pulse-gold pointer-events-none" />}
           </div>
           <h1 className="text-3xl font-bold font-display text-foreground mb-4">
             {profileData.displayName || "Private Profile"}
@@ -211,7 +405,26 @@ END:VCARD`;
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className={`min-h-screen bg-background pb-20 relative ${hasRoyalTexture ? 'bg-texture-gold' : ''}`}>
+      {hasRoyalTexture && <div className="fixed inset-0 bg-[url('https://www.transparenttextures.com/patterns/gold-scale.png')] opacity-[0.05] pointer-events-none z-0" />}
+
+      {/* Top Right Actions */}
+      <div className="absolute top-4 right-4 z-50">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-2 rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-black/40 transition-colors">
+              <MoreVertical className="w-6 h-6" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleReportOpen} className="text-destructive focus:text-destructive cursor-pointer">
+              <Flag className="w-4 h-4 mr-2" />
+              Report User
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       {/* Hero Header */}
       <div className="relative h-64 overflow-hidden">
         {wallpaperUrl ? (
@@ -254,45 +467,70 @@ END:VCARD`;
             {profileData.displayName || `${profileData.firstName} ${profileData.lastName}`}
           </h1>
           <p className="text-lg text-primary mb-2">{profileData.title}</p>
-          <div className="text-muted-foreground flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              {profileData.company && <span>{profileData.company}</span>}
-              {profileData.company && profileData.location && <span>|</span>}
+          <div className="text-muted-foreground flex flex-col items-center gap-2 mt-2">
+            <div className="flex flex-wrap justify-center items-center gap-2">
+              {profileData.company && (
+                <div className="flex items-center gap-1.5">
+                  <Building className="w-4 h-4" />
+                  <span>{profileData.company}</span>
+                </div>
+              )}
+
+              {profileData.company && profileData.location && (
+                <span className="text-muted-foreground/40 text-sm">|</span>
+              )}
+
               {profileData.location && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {profileData.location}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  <span>{profileData.location}</span>
+                </div>
               )}
             </div>
-            {profileData.phone && (
-              <div className="flex items-center gap-1 mt-1">
-                <Phone className="w-3 h-3" />
-                <span>{profileData.phone}</span>
-              </div>
-            )}
+
+            <div className="flex flex-wrap justify-center items-center gap-2">
+              {profileData.email && (
+                <a href={`mailto:${profileData.email}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Mail className="w-4 h-4" />
+                  <span>{profileData.email}</span>
+                </a>
+              )}
+
+              {profileData.email && profileData.phone && (
+                <span className="text-muted-foreground/40 text-sm">|</span>
+              )}
+
+              {profileData.phone && (
+                <a href={`tel:${profileData.phone}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Phone className="w-4 h-4" />
+                  <span>{profileData.phone}</span>
+                </a>
+              )}
+            </div>
           </div>
         </motion.div>
 
-        {/* Save Contact Button */}
-        <motion.div
-          className="mb-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-        >
-          <NeonButton className="w-full px-4" onClick={handleSaveContact}>
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-3">
-                <UserPlus className="w-5 h-5" />
-                <span className="font-bold text-lg">Save Contact</span>
+        {/* Save Contact Button - Hidden for Owner */}
+        {!isOwnProfile && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <NeonButton className="w-full px-4" onClick={handleSaveContact}>
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <UserPlus className="w-5 h-5" />
+                  <span className="font-bold text-lg">Save Contact</span>
+                </div>
+                <div className="opacity-70 group-hover:opacity-100 transition-opacity">
+                  <Download className="w-5 h-5" />
+                </div>
               </div>
-              <div className="opacity-70 group-hover:opacity-100 transition-opacity">
-                <Download className="w-5 h-5" />
-              </div>
-            </div>
-          </NeonButton>
-        </motion.div>
+            </NeonButton>
+          </motion.div>
+        )}
 
         {/* Bio */}
         {profileData.bio && (
@@ -379,26 +617,28 @@ END:VCARD`;
           </motion.div>
         )}
 
-        {/* Contact Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <GlassCard className="p-6 mb-8">
-            <h2 className="text-xl font-bold font-display text-foreground mb-4">Get in Touch</h2>
-            <form onSubmit={handleSendMessage} className="space-y-4">
-              <textarea
-                rows={3}
-                placeholder="Your Message..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none"
-              />
-              <NeonButton type="submit" className="w-full">Send Message</NeonButton>
-            </form>
-          </GlassCard>
-        </motion.div>
+        {/* Contact Form - Hidden for Owner */}
+        {!isOwnProfile && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <GlassCard className="p-6 mb-8">
+              <h2 className="text-xl font-bold font-display text-foreground mb-4">Get in Touch</h2>
+              <form onSubmit={handleSendMessage} className="space-y-4">
+                <textarea
+                  rows={3}
+                  placeholder="Your Message..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none"
+                />
+                <NeonButton type="submit" className="w-full">Send Message</NeonButton>
+              </form>
+            </GlassCard>
+          </motion.div>
+        )}
 
         {/* PIN Locked Section - Only visible if there is content */}
         {((profileData.privateMetadata && profileData.privateMetadata.length > 0) || (profileData.privateContents && profileData.privateContents.length > 0)) && (
@@ -490,21 +730,33 @@ END:VCARD`;
         {/* We merged logic into the block above to handle the lock/unlock transition smoothly in one card. */}
 
         {/* Footer */}
-        <div className="text-center mt-12">
-          <p className="text-sm text-muted-foreground">
-            Powered by{" "}
-            <a href="/" className="text-primary hover:underline">
-              NXC Badge Verse
-            </a>
-          </p>
-        </div>
+        {!hasCustomBranding && (
+          <div className="text-center mt-12">
+            <p className="text-sm text-muted-foreground">
+              Powered by{" "}
+              <a href="/" className="text-primary hover:underline">
+                NXC Badge Verse
+              </a>
+            </p>
+          </div>
+        )}
 
         <ConfirmDialog
-          isOpen={showLoginPrompt}
-          onClose={() => setShowLoginPrompt(false)}
-          onConfirm={() => navigate("/login")}
+          isOpen={!!loginPromptAction}
+          onClose={() => setLoginPromptAction(null)}
+          onConfirm={() => {
+            const actionParam = loginPromptAction === "report" ? "report" : loginPromptAction === "message" ? "message" : "";
+            const redirectUrl = actionParam
+              ? `/login?redirect=${encodeURIComponent(`${window.location.pathname}?action=${actionParam}`)}`
+              : "/login";
+            navigate(redirectUrl);
+          }}
           title="Login Required"
-          description="Please log in to send a secure message to this user."
+          description={
+            loginPromptAction === "report" ? "Please log in to submit a report." :
+              loginPromptAction === "message" ? "Please log in to send a secure message." :
+                "Please log in to continue."
+          }
           confirmText="Log In"
           cancelText="Cancel"
           type="info"
@@ -515,6 +767,71 @@ END:VCARD`;
         onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
         message={errorAlert.message}
       />
+
+      {/* Report Dialog */}
+      <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Report User
+            </DialogTitle>
+            <DialogDescription>
+              Help us keep the community safe. Reports are anonymous to the user.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div className="space-y-3">
+              <Label className="text-foreground">Why are you reporting this user?</Label>
+              <div className="grid gap-2">
+                {REPORT_REASONS.map((reason) => (
+                  <div key={reason} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`reason-${reason}`}
+                      checked={reportReasons.includes(reason)}
+                      onCheckedChange={() => toogleReason(reason)}
+                    />
+                    <Label
+                      htmlFor={`reason-${reason}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {reason}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="report-desc" className="text-foreground">Additional Details (Optional)</Label>
+              <Textarea
+                id="report-desc"
+                placeholder="Provide more context (max 200 chars)..."
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value.slice(0, 200))}
+                className="resize-none h-24"
+              />
+              <div className="text-xs text-muted-foreground text-right">
+                {reportDescription.length}/200
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <NeonButton variant="outline" onClick={() => setIsReportOpen(false)}>
+              Cancel
+            </NeonButton>
+            <NeonButton
+              onClick={handleSubmitReport}
+              disabled={isSubmittingReport || reportReasons.length === 0}
+              className="bg-destructive hover:bg-destructive/90 border-destructive/50 shadow-none text-white"
+            >
+              {isSubmittingReport ? "Submitting..." : "Submit Report"}
+            </NeonButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

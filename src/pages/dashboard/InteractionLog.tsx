@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDashboard } from "@/contexts/DashboardContext";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
 import {
-  Eye, MousePointer, Users, MapPin, Clock, Download,
-  Search, Filter, ChevronDown, Calendar, Globe, Smartphone,
-  ArrowUpDown, ChevronLeft, ChevronRight, MessageSquare
+  Eye, MousePointer, Users, Download,
+  Search, Filter, ChevronDown, Calendar,
+  ArrowUpDown, ChevronLeft, ChevronRight, MessageSquare,
+  User, Phone, Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -17,84 +19,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 
-type InteractionType = "view" | "tap" | "contact_saved" | "link_click";
+type InteractionType = "view" | "tap" | "contact_saved" | "link_click" | "message";
 
 interface Interaction {
   id: string;
   type: InteractionType;
   timestamp: Date;
-  location: string;
-  country: string;
-  device: string;
-  browser: string;
-  source: string;
-  duration?: number;
+  name: string;
+  email: string;
+  phone: string;
 }
-
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/contexts/AuthContext";
-
-// ... (keep interface and typeLabels)
-
-// Removed generateInteractions logic
 
 const typeLabels: Record<string, { label: string; icon: typeof Eye; color: string }> = {
   view: { label: "Profile View", icon: Eye, color: "text-primary" },
   tap: { label: "NFC Tap", icon: MousePointer, color: "text-accent" },
   contact_saved: { label: "Contact Saved", icon: Users, color: "text-success" },
-  link_click: { label: "Link Click", icon: Globe, color: "text-warning" },
+  link_click: { label: "Link Click", icon: MousePointer, color: "text-warning" }, // Icon fallback
   message: { label: "Message", icon: MessageSquare, color: "text-blue-500" },
 };
 
+// ... (typeLabels remain same)
+
 const InteractionLog = () => {
   const { currentUser } = useAuth();
-  const [interactions, setInteractions] = useState<Interaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { interactions: rawInteractions, loading } = useDashboard();
   const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
+
+  // Transform context interactions to local interface
+  const interactions = useMemo(() => {
+    return (rawInteractions || []).map(data => ({
+      id: data.id,
+      type: data.type || "view",
+      timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(),
+      name: data.metadata?.name || data.name || "Anonymous",
+      email: data.metadata?.email || data.email || "-",
+      phone: data.metadata?.phone || data.phone || "-",
+    })) as Interaction[];
+  }, [rawInteractions]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("30");
-  const [sortField, setSortField] = useState<"timestamp" | "location" | "type">("timestamp");
+  const [sortField, setSortField] = useState<"timestamp" | "name" | "type">("timestamp");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    if (!currentUser) return;
-
-    setLoading(true);
-    const q = query(collection(db, "users", currentUser.uid, "interactions"));
-
-    // Real-time listener
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedInteractions: Interaction[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        loadedInteractions.push({
-          id: doc.id,
-          type: data.type,
-          timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(),
-          location: data.metadata?.location || data.location || "Unknown",
-          country: data.metadata?.country || data.country || "Unknown",
-          device: data.metadata?.device || data.device || "Unknown",
-          browser: data.metadata?.browser || data.browser || "Unknown",
-          source: data.source || "Unknown",
-          duration: data.duration || 0,
-        } as Interaction);
-      });
-      setInteractions(loadedInteractions);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching interactions:", error);
-      setErrorAlert({ isOpen: true, message: "Failed to load interactions" });
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [currentUser]);
 
   const filteredData = useMemo(() => {
     let data = [...interactions];
@@ -104,10 +78,9 @@ const InteractionLog = () => {
       const query = searchQuery.toLowerCase();
       data = data.filter(
         (item) =>
-          item.location.toLowerCase().includes(query) ||
-          item.country.toLowerCase().includes(query) ||
-          item.device.toLowerCase().includes(query) ||
-          item.source.toLowerCase().includes(query)
+          item.name.toLowerCase().includes(query) ||
+          item.email.toLowerCase().includes(query) ||
+          item.phone.toLowerCase().includes(query)
       );
     }
 
@@ -127,8 +100,8 @@ const InteractionLog = () => {
       let comparison = 0;
       if (sortField === "timestamp") {
         comparison = a.timestamp.getTime() - b.timestamp.getTime();
-      } else if (sortField === "location") {
-        comparison = a.location.localeCompare(b.location);
+      } else if (sortField === "name") {
+        comparison = a.name.localeCompare(b.name);
       } else if (sortField === "type") {
         comparison = a.type.localeCompare(b.type);
       }
@@ -150,11 +123,11 @@ const InteractionLog = () => {
       totalViews: filteredData.filter((i) => i.type === "view").length,
       totalTaps: filteredData.filter((i) => i.type === "tap").length,
       totalContacts: filteredData.filter((i) => i.type === "contact_saved").length,
-      totalClicks: filteredData.filter((i) => i.type === "link_click").length,
+      // Removed Click stats
     };
   }, [filteredData]);
 
-  const handleSort = (field: "timestamp" | "location" | "type") => {
+  const handleSort = (field: "timestamp" | "name" | "type") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -164,15 +137,13 @@ const InteractionLog = () => {
   };
 
   const exportToCSV = () => {
-    // Simplified CSV: Contact (source), Email (N/A for interactions), Date, Phone (N/A), Company (N/A), Location
-    const headers = ["Contact", "Email", "Date", "Phone", "Company", "Location"];
+    const headers = ["Name", "Email", "Phone", "Type", "Date"];
     const rows = filteredData.map((item) => [
-      item.source, // Contact source
-      "", // Email - not available for interactions
+      item.name,
+      item.email,
+      item.phone,
+      item.type,
       item.timestamp.toLocaleDateString(),
-      "", // Phone - not available for interactions  
-      "", // Company - not available for interactions
-      `${item.location}, ${item.country}`,
     ]);
 
     const csvContent = [headers, ...rows]
@@ -218,13 +189,12 @@ const InteractionLog = () => {
         </NeonButton>
       </div>
 
-      {/* Stats Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Summary - Removed Link Clicks */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           { label: "Views", value: stats.totalViews, icon: Eye, color: "text-primary" },
           { label: "NFC Taps", value: stats.totalTaps, icon: MousePointer, color: "text-accent" },
           { label: "Contacts Saved", value: stats.totalContacts, icon: Users, color: "text-success" },
-          { label: "Link Clicks", value: stats.totalClicks, icon: Globe, color: "text-warning" },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -255,14 +225,14 @@ const InteractionLog = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search by location, device, source..."
+              placeholder="Search by name, email, phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
             />
           </div>
 
-          {/* Type Filter */}
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-full lg:w-48 bg-muted border-border">
               <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -273,11 +243,9 @@ const InteractionLog = () => {
               <SelectItem value="view">Profile Views</SelectItem>
               <SelectItem value="tap">NFC Taps</SelectItem>
               <SelectItem value="contact_saved">Contacts Saved</SelectItem>
-              <SelectItem value="link_click">Link Clicks</SelectItem>
             </SelectContent>
           </Select>
 
-          {/* Date Filter */}
           <Select value={dateFilter} onValueChange={setDateFilter}>
             <SelectTrigger className="w-full lg:w-48 bg-muted border-border">
               <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -285,10 +253,8 @@ const InteractionLog = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
               <SelectItem value="30">Last 30 days</SelectItem>
               <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -301,47 +267,28 @@ const InteractionLog = () => {
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="text-left p-4">
-                  <button
-                    onClick={() => handleSort("type")}
-                    className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors"
-                  >
-                    Type
-                    <ArrowUpDown className="w-4 h-4" />
+                  <button onClick={() => handleSort("type")} className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors">
+                    Type <ArrowUpDown className="w-4 h-4" />
                   </button>
                 </th>
                 <th className="text-left p-4">
-                  <button
-                    onClick={() => handleSort("timestamp")}
-                    className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors"
-                  >
-                    Time
-                    <ArrowUpDown className="w-4 h-4" />
+                  <button onClick={() => handleSort("name")} className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors">
+                    Name <ArrowUpDown className="w-4 h-4" />
                   </button>
                 </th>
+                <th className="text-left p-4"><span className="font-semibold text-foreground">Phone No.</span></th>
+                <th className="text-left p-4"><span className="font-semibold text-foreground">Email</span></th>
                 <th className="text-left p-4">
-                  <button
-                    onClick={() => handleSort("location")}
-                    className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors"
-                  >
-                    Location
-                    <ArrowUpDown className="w-4 h-4" />
+                  <button onClick={() => handleSort("timestamp")} className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors">
+                    Time <ArrowUpDown className="w-4 h-4" />
                   </button>
-                </th>
-                <th className="text-left p-4 hidden md:table-cell">
-                  <span className="font-semibold text-foreground">Device</span>
-                </th>
-                <th className="text-left p-4 hidden lg:table-cell">
-                  <span className="font-semibold text-foreground">Source</span>
-                </th>
-                <th className="text-left p-4 hidden lg:table-cell">
-                  <span className="font-semibold text-foreground">Duration</span>
                 </th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Search className="w-8 h-8 opacity-50" />
                       <p>No interactions found matching your filters.</p>
@@ -350,7 +297,7 @@ const InteractionLog = () => {
                 </tr>
               ) : (
                 paginatedData.map((item, index) => {
-                  const typeInfo = typeLabels[item.type] || { label: "Unknown (" + item.type + ")", icon: Eye, color: "text-muted-foreground" };
+                  const typeInfo = typeLabels[item.type] || { label: item.type, icon: Eye, color: "text-muted-foreground" };
                   return (
                     <motion.tr
                       key={item.id}
@@ -368,39 +315,28 @@ const InteractionLog = () => {
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          <div>
-                            <p className="text-foreground">{formatTimeAgo(item.timestamp)}</p>
-                            <p className="text-xs">{item.timestamp.toLocaleDateString()}</p>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-foreground">{item.name}</span>
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-foreground">{item.location}</p>
-                            <p className="text-xs text-muted-foreground">{item.country}</p>
-                          </div>
+                          <Phone className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{item.phone}</span>
                         </div>
                       </td>
-                      <td className="p-4 hidden md:table-cell">
+                      <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <Smartphone className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-foreground">{item.device}</p>
-                            <p className="text-xs text-muted-foreground">{item.browser}</p>
-                          </div>
+                          <Mail className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{item.email}</span>
                         </div>
                       </td>
-                      <td className="p-4 hidden lg:table-cell">
-                        <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-sm">
-                          {item.source}
-                        </span>
-                      </td>
-                      <td className="p-4 hidden lg:table-cell">
-                        <span className="text-muted-foreground">{item.duration}s</span>
+                      <td className="p-4">
+                        <div className="text-sm">
+                          <p className="text-foreground">{formatTimeAgo(item.timestamp)}</p>
+                          <p className="text-xs text-muted-foreground">{item.timestamp.toLocaleDateString()}</p>
+                        </div>
                       </td>
                     </motion.tr>
                   );

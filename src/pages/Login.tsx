@@ -25,7 +25,8 @@ const Login = () => {
 
   useEffect(() => {
     if (currentUser) {
-      navigate("/dashboard");
+      const redirectPath = new URLSearchParams(window.location.search).get("redirect");
+      navigate(redirectPath || "/dashboard");
     }
   }, [currentUser, navigate]);
 
@@ -34,8 +35,9 @@ const Login = () => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      const redirectPath = new URLSearchParams(window.location.search).get("redirect");
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(redirectPath || "/dashboard");
     } catch (error: any) {
       setErrorAlert({ isOpen: true, message: getFriendlyErrorMessage(error) });
     } finally {
@@ -75,8 +77,9 @@ const Login = () => {
         await setDoc(userDocRef, { lastLogin: serverTimestamp() }, { merge: true });
       }
 
+      const redirectPath = new URLSearchParams(window.location.search).get("redirect");
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(redirectPath || "/dashboard");
     } catch (error: any) {
       const message = getFriendlyErrorMessage(error);
       // Aggressive suppression of any cancellation error
@@ -124,13 +127,13 @@ const Login = () => {
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.3 }}
             >
-              <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
+              <img src="/nxcverse.svg" alt="NXC Badge Verse Logo" className="w-full h-full object-contain" />
             </motion.div>
           </Link>
           <h1 className="font-display text-3xl font-bold mb-2">
             Welcome <GradientText>Back</GradientText>
           </h1>
-          <p className="text-muted-foreground">Sign in to your NXC Badge account</p>
+          <p className="text-muted-foreground">Sign in to your NXC Badge Verse account</p>
         </motion.div>
 
         {/* Login Form */}

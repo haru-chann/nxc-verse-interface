@@ -5,25 +5,38 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Mail, Phone } from "lucide-react";
+import { useContent } from "@/hooks/useContent";
 
-const contactMethods = [
-  {
-    icon: Mail,
-    title: "Email Us",
-    description: "Send us an email anytime",
-    value: "nxcbadge@gmail.com",
-    action: "mailto:nxcbadge@gmail.com",
-  },
-  {
-    icon: Phone,
-    title: "Phone",
-    description: "Call our support line",
-    value: "+919404276942",
-    action: "tel:+919404276942",
-  },
-];
+const defaultContact = {
+  email: "nxcbadge@gmail.com",
+  phone: "+919404276942"
+};
 
 const Contact = () => {
+  const { content } = useContent('contact', defaultContact);
+
+  // Use DB content
+  const email = content?.email || defaultContact.email;
+  const phone = content?.phone || defaultContact.phone;
+
+  // Reconstruct display array dynamically
+  const contactMethods = [
+    {
+      icon: Mail,
+      title: "Email Us",
+      description: "Send us an email anytime",
+      value: email,
+      action: `mailto:${email}`,
+    },
+    {
+      icon: Phone,
+      title: "Phone",
+      description: "Call our support line",
+      value: phone,
+      action: `tel:${phone}`,
+    },
+  ];
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -34,12 +47,12 @@ const Contact = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { firstName, lastName, email, topic, message } = formData;
+    const { firstName, lastName, email: userEmail, topic, message } = formData;
     const fullName = `${firstName} ${lastName}`.trim();
 
     // Construct the email body
     const body = `𝐍𝐚𝐦𝐞: ${fullName}
-𝐄𝐦𝐚𝐢𝐥: ${email}
+𝐄𝐦𝐚𝐢𝐥: ${userEmail}
 𝐓𝐨𝐩𝐢𝐜: ${topic}
 
 𝐌𝐞𝐬𝐬𝐚𝐠𝐞: ${message}`;
@@ -47,7 +60,7 @@ const Contact = () => {
     const subject = `Contact Form: ${topic || "New Message"}`;
 
     // Mailto URL
-    const mailtoUrl = `mailto:nxcbadge@gmail.com?subject=${encodeURIComponent(
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(
       subject
     )}&body=${encodeURIComponent(body)}`;
 

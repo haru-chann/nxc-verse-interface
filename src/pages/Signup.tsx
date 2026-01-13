@@ -92,8 +92,9 @@ const Signup = () => {
       await setDoc(doc(db, "users", user.uid), userPayload, { merge: true });
 
 
+      const redirectPath = new URLSearchParams(window.location.search).get("redirect");
       toast.success("Account created successfully!");
-      navigate("/dashboard");
+      navigate(redirectPath || "/dashboard");
     } catch (error: any) {
       const message = getFriendlyErrorMessage(error);
       // Aggressive suppression of any cancellation error
@@ -156,8 +157,9 @@ const Signup = () => {
           lastLogin: serverTimestamp(),
         }, { merge: true });
 
+        const redirectPath = new URLSearchParams(window.location.search).get("redirect");
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        navigate(redirectPath || "/dashboard");
       }
 
     } catch (error: any) {
@@ -168,7 +170,8 @@ const Signup = () => {
 
   const handlePasswordSetupComplete = () => {
     setShowPasswordModal(false);
-    navigate("/dashboard");
+    const redirectPath = new URLSearchParams(window.location.search).get("redirect");
+    navigate(redirectPath || "/dashboard");
   };
 
   return (
@@ -210,7 +213,7 @@ const Signup = () => {
               <GradientText animate>Digital Identity</GradientText>
             </h1>
             <p className="text-muted-foreground mb-8">
-              Join thousands of professionals who've already upgraded their networking game with NXC Badge.
+              Join thousands of professionals who've already upgraded their networking game with NXC Badge Verse.
             </p>
             <ul className="space-y-4">
               {benefits.map((benefit, index) => (
@@ -238,7 +241,7 @@ const Signup = () => {
             >
               <GlassCard className="p-6">
                 <p className="text-foreground mb-4 italic">
-                  "NXC Badge has completely transformed how I network. I've made more meaningful connections in the last month than the entire previous year."
+                  "NXC Badge Verse has completely transformed how I network. I've made more meaningful connections in the last month than the entire previous year."
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -266,7 +269,7 @@ const Signup = () => {
                   whileHover={{ scale: 1.05 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
+                  <img src="/nxcverse.svg" alt="NXC Badge Verse Logo" className="w-full h-full object-contain" />
                 </motion.div>
               </Link>
               <h2 className="font-display text-3xl font-bold mb-2 lg:hidden">
@@ -275,7 +278,7 @@ const Signup = () => {
               <h2 className="font-display text-3xl font-bold mb-2 hidden lg:block">
                 Get Started <GradientText>Free</GradientText>
               </h2>
-              <p className="text-muted-foreground">Create your NXC Badge account in seconds</p>
+              <p className="text-muted-foreground">Create your NXC Badge Verse account in seconds</p>
             </div>
 
             <GlassCard className="p-8">

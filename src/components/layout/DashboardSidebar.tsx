@@ -1,39 +1,160 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import {
   LayoutDashboard,
   User,
-  QrCode,
-  Activity,
-  Users,
+  CreditCard,
   Settings,
+  ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  Package,
-  Link2,
+  Menu,
+  X,
+  LogOut,
+  Sparkles,
+  QrCode,
+  Activity,
+  Users
 } from "lucide-react";
 
 const menuItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { name: "Profile Editor", path: "/dashboard/profile", icon: User },
-  { name: "Card Link", path: "/dashboard/card-link", icon: Link2 },
+  { name: "Public Profile", path: "/dashboard/profile", icon: User },
   { name: "QR Builder", path: "/dashboard/qr-builder", icon: QrCode },
   { name: "Interactions", path: "/dashboard/interactions", icon: Activity },
   { name: "Contacts", path: "/dashboard/contacts", icon: Users },
+  { name: "My Cards", path: "/dashboard/my-cards", icon: CreditCard },
   { name: "Settings", path: "/dashboard/settings", icon: Settings },
 ];
 
 interface DashboardSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobileOpen: boolean; // [NEW]
+  onMobileClose: () => void; // [NEW]
 }
 
-export const DashboardSidebar = ({ collapsed, onToggle }: DashboardSidebarProps) => {
+export const DashboardSidebar = ({ collapsed, onToggle, mobileOpen, onMobileClose }: DashboardSidebarProps) => {
   const location = useLocation();
+  const { currentUser, isAdmin } = useAuth();
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    onMobileClose();
+  }, [location.pathname]);
+
+  const SidebarContent = () => (
+    <>
+      {/* Logo */}
+      <div className="h-20 flex items-center justify-between px-4 border-b border-sidebar-border">
+        <Link to="/dashboard" className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden bg-sidebar-primary/10">
+            <img src="/nxcverse.svg" alt="NXC Badge Verse Logo" className="w-full h-full object-contain" />
+          </div>
+          {(!collapsed || mobileOpen) && (
+            <span className="font-display text-lg font-bold text-sidebar-foreground">
+              NXC Badge Verse
+            </span>
+          )}
+        </Link>
+        {/* Mobile Close Button */}
+        {mobileOpen && (
+          <button onClick={onMobileClose} className="lg:hidden p-2 text-sidebar-foreground/70 hover:text-foreground">
+            <X className="w-6 h-6" />
+          </button>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 py-6 px-3 overflow-y-auto custom-scrollbar">
+        <ul className="space-y-1">
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-neon-sm"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  )}
+                >
+                  <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-sidebar-primary-foreground")} />
+
+                  {(!collapsed || mobileOpen) && (
+                    <span className="text-sm font-medium">{item.name}</span>
+                  )}
+
+                  {collapsed && !mobileOpen && (
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                      {item.name}
+                    </div>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
+
+          {/* Admin Link */}
+          {isAdmin && (
+            <li>
+              <Link
+                to="/admin"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  location.pathname.startsWith("/admin") && "bg-sidebar-primary text-sidebar-primary-foreground shadow-neon-sm"
+                )}
+              >
+                <ShieldCheck className={cn("w-5 h-5 flex-shrink-0", location.pathname.startsWith("/admin") && "text-sidebar-primary-foreground")} />
+                {(!collapsed || mobileOpen) && (
+                  <span className="text-sm font-medium">Admin Panel</span>
+                )}
+                {collapsed && !mobileOpen && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+                    Admin Panel
+                  </div>
+                )}
+              </Link>
+            </li>
+          )}
+        </ul>
+      </nav>
+    </>
+  );
 
   return (
     <>
+      {/* Mobile Drawer Overlay */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onMobileClose}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 lg:hidden"
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border z-50 lg:hidden flex flex-col"
+            >
+              <SidebarContent />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Desktop Sidebar */}
       <motion.aside
         className={cn(
@@ -43,74 +164,10 @@ export const DashboardSidebar = ({ collapsed, onToggle }: DashboardSidebarProps)
         initial={false}
         animate={{ width: collapsed ? 80 : 256 }}
       >
-        {/* Logo */}
-        <div className="h-20 flex items-center justify-between px-4 border-b border-sidebar-border">
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <motion.div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.3 }}
-            >
-              <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
-            </motion.div>
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="font-display text-lg font-bold text-sidebar-foreground whitespace-nowrap overflow-hidden"
-                >
-                  NXC Badge
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </Link>
-        </div>
+        <SidebarContent />
 
-        {/* Navigation */}
-        <nav className="flex-1 py-6 px-3 overflow-y-auto custom-scrollbar">
-          <ul className="space-y-1">
-            {menuItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
-                      isActive
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-neon-sm"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                    )}
-                  >
-                    <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-sidebar-primary-foreground")} />
-                    <AnimatePresence>
-                      {!collapsed && (
-                        <motion.span
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: "auto" }}
-                          exit={{ opacity: 0, width: 0 }}
-                          className="text-sm font-medium whitespace-nowrap overflow-hidden"
-                        >
-                          {item.name}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                    {collapsed && (
-                      <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg">
-                        {item.name}
-                      </div>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Footer */}
-        <div className="p-3 border-t border-sidebar-border">
+        {/* Footer (Desktop Only Toggle) */}
+        <div className="p-3 border-t border-sidebar-border mt-auto">
           <button
             onClick={onToggle}
             className="w-full flex items-center justify-center gap-3 px-3 py-3 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
@@ -126,30 +183,6 @@ export const DashboardSidebar = ({ collapsed, onToggle }: DashboardSidebarProps)
           </button>
         </div>
       </motion.aside>
-
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-sidebar/95 backdrop-blur-xl border-t border-sidebar-border z-50 safe-area-inset-bottom">
-        <div className="flex items-center justify-around py-2">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{item.name.split(" ")[0]}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
     </>
   );
 };

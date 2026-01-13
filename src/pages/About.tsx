@@ -3,15 +3,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { Target, Heart, Zap, Globe, Users, Award } from "lucide-react";
+import { useContent } from "@/hooks/useContent";
 
-const stats = [
-  { value: 50000, suffix: "+", label: "Active Users" },
-  { value: 150, suffix: "+", label: "Countries" },
-  { value: 2, suffix: "M+", label: "Connections" },
-  { value: 99, suffix: "%", label: "Uptime" },
-];
-
-const values = [
+const defaultValues = [
   {
     icon: Target,
     title: "Mission-Driven",
@@ -34,15 +28,38 @@ const values = [
   },
 ];
 
-const team = [
-  { name: "Ritesh Martawar", role: "Founder & Developer", avatar: "RM" }, // Correcting AR -> RM (Assumption, or keeping consistency?) 
-  { name: "Vishal Pandey", role: "Co-Founder & Developer", avatar: "VP" }, // JL -> VP
-  { name: "Ishaan Apte", role: "Designer", avatar: "IA" }, // SC -> IA
-  { name: "Meghant Darji", role: "Product Head", avatar: "MD" }, // MT -> MD
+const defaultTeam = [
+  { name: "Ritesh Martawar", role: "Founder & Developer", avatar: "RM" },
+  { name: "Vishal Pandey", role: "Co-Founder & Developer", avatar: "VP" },
+  { name: "Ishaan Apte", role: "Designer", avatar: "IA" },
+  { name: "Meghant Darji", role: "Product Head", avatar: "MD" },
   { name: "Saksham Jiddewar", role: "Marketing Strategist", avatar: "SJ" },
 ];
 
+const defaultStory = [
+  "NXC Badge Verse was born in November 2024 from one fearless idea — professional identity should feel powerful, futuristic, and alive.",
+  "Built by students with ambition that refuses to shrink, we created a digital visiting card platform engineered like a blockbuster: precise, immersive, and built to last.",
+  "Led by Ritesh Martawar with the strength of Vishal Pandey, Ishaan Apte, and Meghant Darji, this isn’t just tech. It’s a statement. And it’s only the beginning."
+];
+
 const About = () => {
+  const { content } = useContent('about', { story: defaultStory, values: defaultValues, team: defaultTeam });
+
+  // Dynamic Data with Fallbacks
+  const story = content?.story || defaultStory;
+  const values = content?.values || defaultValues;
+  const team = content?.team || defaultTeam;
+
+  // Helper to map icon names if we stored them as strings in DB (future proofing), currently DB stores static list so we might loose icons if we fully dynamic them without a map.
+  // For now, let's assume 'values' from DB might not have the actual Icon component if saved via JSON. 
+  // BUT, our CMSAbout uses a hardcoded defaultValues which HAS icons. 
+  // If we save via CMS, we likely strip the icon component. 
+  // We should map titles to icons or use a fallback.
+  const getIcon = (title: string, index: number) => {
+    const iconMap: any = { "Mission-Driven": Target, "User-Centric": Heart, "Innovation First": Zap, "Global Impact": Globe };
+    return iconMap[title] || [Target, Heart, Zap, Globe][index % 4];
+  };
+
   return (
     <div className="pt-20">
       {/* Hero Section */}
@@ -68,8 +85,6 @@ const About = () => {
         </div>
       </section>
 
-      {/* Stats Section Removed */}
-
       {/* Story Section */}
       <section className="py-32 relative">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -82,15 +97,11 @@ const About = () => {
               Our <GradientText>Story</GradientText>
             </h2>
             <div className="prose prose-lg dark:prose-invert mx-auto space-y-8">
-              <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground">
-                NXC Badge Verse was born in November 2024 from one fearless idea — professional identity should feel powerful, futuristic, and alive.
-              </p>
-              <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground">
-                Built by students with ambition that refuses to shrink, we created a digital visiting card platform engineered like a blockbuster: precise, immersive, and built to last.
-              </p>
-              <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground">
-                Led by Ritesh Martawar with the strength of Vishal Pandey, Ishaan Apte, and Meghant Darji, this isn’t just tech. It’s a statement. And it’s only the beginning.
-              </p>
+              {story.map((paragraph: string, i: number) => (
+                <p key={i} className="text-xl md:text-2xl leading-relaxed text-muted-foreground">
+                  {paragraph}
+                </p>
+              ))}
             </div>
           </motion.div>
         </div>
@@ -112,30 +123,33 @@ const About = () => {
           </motion.div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((value, index) => (
-              <motion.div
-                key={value.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <GlassCard variant="hover" className="p-6 h-full text-center">
-                  <motion.div
-                    className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                  >
-                    <value.icon className="w-7 h-7 text-primary" />
-                  </motion.div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2 font-display">
-                    {value.title}
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    {value.description}
-                  </p>
-                </GlassCard>
-              </motion.div>
-            ))}
+            {values.map((value: any, index: number) => {
+              const Icon = getIcon(value.title, index);
+              return (
+                <motion.div
+                  key={value.title || index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <GlassCard variant="hover" className="p-6 h-full text-center">
+                    <motion.div
+                      className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                    >
+                      <Icon className="w-7 h-7 text-primary" />
+                    </motion.div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2 font-display">
+                      {value.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      {value.description}
+                    </p>
+                  </GlassCard>
+                </motion.div>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -157,9 +171,9 @@ const About = () => {
 
           {/* Changed from grid to flex-wrap to center 5 items nicely */}
           <div className="flex flex-wrap justify-center gap-8">
-            {team.map((member, index) => (
+            {team.map((member: any, index: number) => (
               <motion.div
-                key={member.name}
+                key={member.name || index}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

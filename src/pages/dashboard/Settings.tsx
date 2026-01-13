@@ -18,9 +18,13 @@ import {
   EyeOff,
   Save,
   Camera,
+  Code,
+  Crown,
+  Check
 } from "lucide-react";
+import { useSubscriptionLimits } from "@/hooks/useSubscriptionLimits";
 import { updatePassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, updateProfile } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useNavigate } from "react-router-dom";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -54,6 +58,8 @@ const Settings = () => {
     newContactAlerts: true,
     profileViewAlerts: true,
   });
+
+  const limits = useSubscriptionLimits();
 
   // Load user data
   useEffect(() => {
@@ -246,6 +252,27 @@ const Settings = () => {
     }
   };
 
+  const handlePromoteToAdmin = async () => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        role: "admin"
+      });
+      toast({
+        title: "Success",
+        description: "You are now an Admin. Refreshing page...",
+      });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "Failed to promote to admin.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center text-muted-foreground">Loading settings...</div>;
   }
@@ -259,6 +286,85 @@ const Settings = () => {
         </h1>
         <p className="text-muted-foreground mt-1">Manage your account preferences and security</p>
       </div>
+
+      {/* Subscription Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <GlassCard className="p-6 border-primary/20 bg-primary/5">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Crown className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold font-display text-foreground">Current Plan</h2>
+                <p className="text-sm text-muted-foreground">Your subscription and limits</p>
+              </div>
+            </div>
+            <NeonButton size="sm" onClick={() => navigate("/pricing")}>
+              Upgrade Plan
+            </NeonButton>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* Plan Identity */}
+            <div className="p-4 rounded-xl bg-background/40 border border-white/5">
+              <p className="text-sm text-muted-foreground mb-1">Active Plan</p>
+              <p className="text-lg font-bold text-primary capitalize">
+                {(() => {
+                  const plans = limits.activePlanNames;
+                  const premiumPlans = plans.filter(p => p && p.toLowerCase() !== "free");
+                  // Show the last premium plan (assuming it's the highest tier) or fallback to Free
+                  return premiumPlans.length > 0 ? premiumPlans[premiumPlans.length - 1] : "Free Standard";
+                })()}
+              </p>
+            </div>
+
+            {/* Key Limits */}
+            <div className="p-4 rounded-xl bg-background/40 border border-white/5">
+              <p className="text-sm text-muted-foreground mb-1">Portfolio Items</p>
+              <div className="flex items-end gap-1">
+                <span className="text-lg font-bold text-foreground">
+                  {loading ? "-" : limits.maxPortfolioItems}
+                </span>
+                <span className="text-xs text-muted-foreground mb-1">max</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-background/40 border border-white/5">
+              <p className="text-sm text-muted-foreground mb-1">Private Content</p>
+              <div className="flex items-end gap-1">
+                <span className="text-lg font-bold text-foreground">
+                  {loading ? "-" : limits.maxPrivateContentItems}
+                </span>
+                <span className="text-xs text-muted-foreground mb-1">items</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature Grid */}
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className={`p-3 rounded-lg border flex items-center gap-2 ${limits.features.portfolio ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-white/5 opacity-50'}`}>
+              {limits.features.portfolio ? <Check className="w-4 h-4 text-primary" /> : <Lock className="w-4 h-4" />}
+              <span className="text-xs font-medium">Portfolio</span>
+            </div>
+            <div className={`p-3 rounded-lg border flex items-center gap-2 ${limits.features.privateContent ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-white/5 opacity-50'}`}>
+              {limits.features.privateContent ? <Check className="w-4 h-4 text-primary" /> : <Lock className="w-4 h-4" />}
+              <span className="text-xs font-medium">Private Mode</span>
+            </div>
+            <div className={`p-3 rounded-lg border flex items-center gap-2 ${limits.features.wallpaper ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-white/5 opacity-50'}`}>
+              {limits.features.wallpaper ? <Check className="w-4 h-4 text-primary" /> : <Lock className="w-4 h-4" />}
+              <span className="text-xs font-medium">Custom Wallpaper</span>
+            </div>
+            <div className={`p-3 rounded-lg border flex items-center gap-2 ${limits.features.customBranding ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-white/5 opacity-50'}`}>
+              {limits.features.customBranding ? <Check className="w-4 h-4 text-primary" /> : <Lock className="w-4 h-4" />}
+              <span className="text-xs font-medium">No Branding</span>
+            </div>
+          </div>
+        </GlassCard>
+      </motion.div>
 
       {/* Profile Settings */}
       <motion.div
@@ -534,12 +640,75 @@ const Settings = () => {
         type="danger"
         loading={deleteLoading}
       />
+      {/* Developer Zone */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+      >
+        <GlassCard className="p-8 border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 rounded-xl bg-primary/20 text-primary">
+              <Code className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold font-display text-foreground">Developer Zone</h2>
+              <p className="text-sm text-muted-foreground">Advanced settings for developers</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl bg-background/50 border border-white/5">
+            <div>
+              <div className="font-medium text-foreground mb-1">Role Management</div>
+              <div className="text-xs text-muted-foreground">
+                Current Role: <span className="text-primary font-bold">
+                  {useAuth().isSuperAdmin ? "Super Admin" : useAuth().isAdmin ? "Admin" : "User"}
+                </span>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 font-mono">
+                Claims: {JSON.stringify({ admin: useAuth().isAdmin, super_admin: useAuth().isSuperAdmin })}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  const { dismiss } = toast({
+                    title: "Refreshing Permissions...",
+                    description: "Please wait a moment",
+                  });
+                  try {
+                    await useAuth().refreshClaims();
+                    dismiss();
+                    toast({
+                      title: "Permissions Refreshed!",
+                      description: "Your session has been updated.",
+                    });
+                    // Force reload to ensure all components see it
+                    window.location.reload();
+                  } catch (e) {
+                    dismiss();
+                    toast({
+                      title: "Failed to refresh",
+                      description: "Could not update permissions.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors"
+              >
+                Refresh Permissions
+              </button>
+            </div>
+          </div>
+        </GlassCard>
+      </motion.div>
+
       <ErrorAlert
         isOpen={errorAlert.isOpen}
         onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
         message={errorAlert.message}
       />
-    </div>
+    </div >
   );
 };
 

@@ -11,11 +11,14 @@ import { toast } from "sonner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 
+import { userService } from "@/services/userService";
+
 interface Notification {
   id: string;
   type: "view" | "tap" | "contact_saved" | "message";
   name: string;
   email?: string;
+  visitorId?: string; // [NEW]
   message?: string;
   time: string;
   location: string;
@@ -34,6 +37,7 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
+  const [blockedUsers, setBlockedUsers] = useState<string[]>([]); // [NEW]
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Long press handling
@@ -41,9 +45,9 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
 
   useEffect(() => {
     if (isOpen && currentUser) {
+      // 1. Listen for Notifications
       const q = query(
         collection(db, "users", currentUser.uid, "interactions"),
-        // Remove 'where' to avoid Missing Index crashes on composite queries
         orderBy("timestamp", "desc"),
         limit(100)
       );
@@ -53,10 +57,9 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
         snapshot.docs.forEach((doc) => {
           const data = doc.data();
 
-          // Client-side filtering
           if (["tap", "contact_saved", "message", "contact"].includes(data.type)) {
             let name = "Someone";
-            let type: Notification["type"] = "view"; // Default/Fallback
+            let type: Notification["type"] = "view";
 
             if (data.type === "tap") {
               type = "tap";
@@ -74,6 +77,7 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
               type: (data.type === 'contact' ? 'contact_saved' : type) as any,
               name: name,
               email: data.email,
+              visitorId: data.visitorId, // [NEW] Keep visitorId for blocking
               message: data.message,
               location: data.metadata?.location || "Unknown Location",
               time: data.timestamp?.toDate ?
@@ -86,17 +90,24 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
         setNotifications(loadedNotifications);
       });
 
-      return () => unsubscribe();
+      // 2. Listen for Blocked Users
+      const userUnsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
+        if (docSnap.exists()) {
+          setBlockedUsers(docSnap.data().blocked || []);
+        }
+      });
+
+      return () => {
+        unsubscribe();
+        userUnsubscribe();
+      };
     }
   }, [isOpen, currentUser]);
 
   const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation(); // Prevent trigger selection
+    e?.stopPropagation();
     if (!currentUser) return;
-
-    // Optimistic update
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-
     try {
       await interactionService.updateInteraction(currentUser.uid, id, { read: true });
     } catch (err) {
@@ -110,6 +121,56 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
     notifications.forEach(n => {
       if (!n.read) interactionService.updateInteraction(currentUser.uid, n.id, { read: true });
     });
+  };
+
+  // [NEW] Single Delete
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentUser) return;
+
+    // Optimistic
+    setNotifications(prev => prev.filter(n => n.id !== id));
+
+    try {
+      await interactionService.deleteInteraction(currentUser.uid, id);
+    } catch (error) {
+      console.error("Failed to delete", error);
+      toast.error("Failed to delete notification");
+    }
+  };
+
+  // [NEW] Block/Unblock Logic
+  const handleBlockToggle = async (notification: Notification, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentUser) return;
+
+    const itemsToBlock = [];
+    if (notification.visitorId) itemsToBlock.push(notification.visitorId);
+    if (notification.email) itemsToBlock.push(notification.email);
+
+    // Simple heuristic: If we have ANY identifier, we use the first available one to toggle
+    // Ideally we should block ALL identifiers found, but for toggle UI we usually check against one.
+    // Let's rely on visitorId first, then email.
+    const targetIdentifier = notification.visitorId || notification.email;
+
+    if (!targetIdentifier) {
+      toast.error("Cannot block anonymous user");
+      return;
+    }
+
+    const isBlocked = blockedUsers.includes(targetIdentifier);
+
+    try {
+      if (isBlocked) {
+        await userService.unblockUser(currentUser.uid, targetIdentifier);
+        toast.success(`Unblocked ${notification.name}`);
+      } else {
+        await userService.blockUser(currentUser.uid, targetIdentifier);
+        toast.success(`Blocked ${notification.name} from sending messages`);
+      }
+    } catch (error) {
+      toast.error(isBlocked ? "Failed to unblock" : "Failed to block");
+    }
   };
 
   const toggleSelection = (id: string) => {
@@ -140,7 +201,6 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
     if (!currentUser) return;
     const idsToDelete = Array.from(selectedIds);
 
-    // Optimistic
     setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)));
     setIsSelectionMode(false);
     setSelectedIds(new Set());
@@ -255,6 +315,10 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
                   notifications.map((notification, index) => {
                     const Icon = getIcon(notification.type);
                     const isSelected = selectedIds.has(notification.id);
+                    // Determine if blocked
+                    const targetIdentifier = notification.visitorId || notification.email;
+                    const isBlocked = targetIdentifier ? blockedUsers.includes(targetIdentifier) : false;
+
                     return (
                       <motion.div
                         key={notification.id}
@@ -272,7 +336,7 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
                           }
                         }}
                         className={cn(
-                          "p-4 rounded-xl cursor-pointer transition-all group flex items-center gap-3",
+                          "p-4 rounded-xl cursor-pointer transition-all group relative flex items-center gap-3",
                           isSelected ? "bg-primary/10 border-primary" :
                             notification.read
                               ? "bg-muted/50 hover:bg-muted"
@@ -291,7 +355,7 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
                           </div>
                         )}
 
-                        <div className="flex gap-3 flex-1 min-w-0">
+                        <div className="flex gap-3 flex-1 min-w-0 group-hover:pr-14 transition-all">
                           {/* Avatar Pattern */}
                           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0">
                             <span className="text-primary-foreground font-bold">
@@ -303,7 +367,10 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className="font-medium text-foreground truncate">{notification.name || "Visitor"}</p>
+                                <p className="font-medium text-foreground truncate flex items-center gap-2">
+                                  {notification.name || "Visitor"}
+                                  {isBlocked && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Blocked</span>}
+                                </p>
                                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                                   <Icon className="w-3 h-3" />
                                   {getTypeLabel(notification.type)}
@@ -325,6 +392,33 @@ export const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) =
                             </div>
                           </div>
                         </div>
+
+                        {/* Hover Actions (Delete & Block) - Only show when NOT selection mode */}
+                        {!isSelectionMode && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm p-1 rounded-lg border border-white/10 shadow-lg">
+                            {/* Block Button - Only for messages or identifies */}
+                            {targetIdentifier && (
+                              <button
+                                onClick={(e) => handleBlockToggle(notification, e)}
+                                className={cn(
+                                  "p-2 rounded-md transition-colors",
+                                  isBlocked ? "text-red-400 hover:bg-red-500/20" : "text-muted-foreground hover:bg-white/10 hover:text-red-400"
+                                )}
+                                title={isBlocked ? "Unblock User" : "Block User"}
+                              >
+                                <AlertTriangle className={cn("w-4 h-4", isBlocked && "fill-current")} />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={(e) => handleDelete(notification.id, e)}
+                              className="p-2 rounded-md text-muted-foreground hover:bg-white/10 hover:text-destructive transition-colors"
+                              title="Delete Notification"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </motion.div>
                     );
                   })

@@ -54,10 +54,10 @@ export const Footer = () => {
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.3 }}
               >
-                <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
+                <img src="/nxcverse.svg" alt="NXC Badge Verse Logo" className="w-full h-full object-contain" />
               </motion.div>
               <span className="font-display text-xl font-bold text-foreground">
-                NXC <span className="text-primary">Badge</span>
+                NXC <span className="text-primary">Badge Verse</span>
               </span>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-sm">

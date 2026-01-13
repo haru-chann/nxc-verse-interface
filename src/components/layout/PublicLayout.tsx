@@ -1,12 +1,15 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 
 export const PublicLayout = () => {
+  const [searchParams] = useSearchParams();
+  const isMinimal = searchParams.get("minimal") === "true";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
+      {!isMinimal && <Navbar />}
       <motion.main
         className="flex-1"
         initial={{ opacity: 0 }}
@@ -16,7 +19,7 @@ export const PublicLayout = () => {
       >
         <Outlet />
       </motion.main>
-      <Footer />
+      {!isMinimal && <Footer />}
     </div>
   );
 };

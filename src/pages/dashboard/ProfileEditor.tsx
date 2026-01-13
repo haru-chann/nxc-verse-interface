@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { storageService } from "@/services/storageService";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { getFriendlyErrorMessage } from "@/lib/errorUtils";
+import { useSubscriptionLimits } from "@/hooks/useSubscriptionLimits";
+import { UpgradeModal } from "@/components/dashboard/UpgradeModal";
 
 interface PortfolioItem {
   id: number;
@@ -196,6 +198,26 @@ const ProfileEditor = () => {
     }
   };
 
+  const handleRemoveWallpaper = async () => {
+    if (!currentUser || !profileData.coverImage) return;
+
+    try {
+      const toastId = toast.loading("Removing wallpaper...");
+      await storageService.deleteImage(profileData.coverImage);
+
+      await userService.updateUserProfile(currentUser.uid, {
+        coverImage: ""
+      });
+
+      setProfileData(prev => ({ ...prev, coverImage: "" }));
+      toast.dismiss(toastId);
+      toast.success("Wallpaper removed");
+    } catch (error: any) {
+      console.error(error);
+      setErrorAlert({ isOpen: true, message: "Failed to remove wallpaper" });
+    }
+  };
+
   const handleSave = async () => {
     if (!currentUser) return;
     setLoading(true);
@@ -209,6 +231,7 @@ const ProfileEditor = () => {
         title: profileData.title,
         company: profileData.company,
         phone: profileData.phone,
+        email: profileData.email,
         // Detailed fields
         links: links,
         portfolioItems: portfolioItems,
@@ -420,9 +443,31 @@ const ProfileEditor = () => {
     }
   };
 
+  // Subscription Limits Hook
+  const { maxLinks, maxPortfolioItems, maxPrivateContentItems, features: planFeatures, loading: limitsLoading } = useSubscriptionLimits();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState("");
+
+  const handleAddLink = () => {
+    if (links.length >= maxLinks) {
+      setUpgradeReason(`You've reached the limit of ${maxLinks} links for your active plans.`);
+      setShowUpgradeModal(true);
+      return;
+    }
+    setLinks([...links, { id: Date.now(), title: "", url: "", icon: "link" }]);
+  };
+
   return (
     <div className="min-h-screen bg-background -m-4 lg:-m-8">
       <div className="w-full h-full space-y-8">
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          title="Limit Reached"
+          description={upgradeReason}
+        />
 
         <div className="flex items-center justify-between sticky top-0 z-50 bg-background/80 backdrop-blur-md py-4 px-4 lg:px-8 border-b border-border/50">
           <div>
@@ -534,12 +579,13 @@ const ProfileEditor = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">Email (Optional)</label>
                   <input
-                    type="text"
+                    type="email"
                     value={profileData.email}
-                    disabled
-                    className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border focus:outline-none text-muted-foreground cursor-not-allowed"
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    placeholder="name@example.com"
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                   />
                 </div>
 
@@ -566,7 +612,7 @@ const ProfileEditor = () => {
               <div className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                       <Building className="w-4 h-4 text-muted-foreground" />
                       Company Name
                     </label>
@@ -583,7 +629,7 @@ const ProfileEditor = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
                       Location
                     </label>
@@ -601,7 +647,7 @@ const ProfileEditor = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                  <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
                     Phone Number
                   </label>
@@ -645,10 +691,7 @@ const ProfileEditor = () => {
                   <LinkIcon className="w-5 h-5 text-primary" />
                   Links
                 </h2>
-                <NeonButton variant="outline" size="sm" onClick={() => {
-                  setLinks([...links, { id: Date.now(), title: "", url: "", icon: "link" }]);
-
-                }}>
+                <NeonButton variant="outline" size="sm" onClick={handleAddLink}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Link
                 </NeonButton>
@@ -715,15 +758,34 @@ const ProfileEditor = () => {
                   )}
 
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleWallpaperUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <NeonButton variant="outline" size="sm" className="pointer-events-none">Change Wallpaper</NeonButton>
-                    </div>
+                    {!planFeatures.wallpaper ? (
+                      <NeonButton size="sm" onClick={() => {
+                        setUpgradeReason("Custom Wallpapers are a premium feature.");
+                        setShowUpgradeModal(true);
+                      }}>
+                        <Lock className="w-4 h-4 mr-2" /> Unlock Wallpaper
+                      </NeonButton>
+                    ) : (
+                      <>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleWallpaperUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <NeonButton variant="outline" size="sm" className="pointer-events-none">Change Wallpaper</NeonButton>
+                      </>
+                    )}
+
+                    {profileData.coverImage && planFeatures.wallpaper && (
+                      <button
+                        onClick={handleRemoveWallpaper}
+                        className="ml-2 p-2 rounded-xl bg-background/80 hover:bg-destructive/90 text-foreground hover:text-white transition-colors z-20"
+                        title="Remove Wallpaper"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -751,6 +813,18 @@ const ProfileEditor = () => {
                   variant={editingPortfolioId ? "primary" : "outline"}
                   size="sm"
                   onClick={() => {
+                    if (!planFeatures.portfolio) {
+                      setUpgradeReason("The Portfolio feature is not included in your current plan.");
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+
+                    if (portfolioItems.length >= maxPortfolioItems && !editingPortfolioId) {
+                      setUpgradeReason(`You've reached the limit of ${maxPortfolioItems} portfolio items.`);
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+
                     if (editingPortfolioId && showAddPortfolio) {
                       setShowAddPortfolio(!showAddPortfolio);
                       if (showAddPortfolio) cancelEditPortfolio();
@@ -764,8 +838,21 @@ const ProfileEditor = () => {
                 </NeonButton>
               </div>
 
+              {/* Lock Warning for Portfolio */}
+              {!planFeatures.portfolio && portfolioItems.length === 0 && (
+                <div className="p-8 text-center border border-white/10 rounded-xl bg-muted/20 flex flex-col items-center gap-2">
+                  <Lock className="w-8 h-8 text-muted-foreground" />
+                  <h3 className="font-bold">Portfolio Locked</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Upgrade your plan to showcase your work.</p>
+                  <NeonButton size="sm" onClick={() => {
+                    setUpgradeReason("Upgrade to unlock the Portfolio feature.");
+                    setShowUpgradeModal(true);
+                  }}>Unlock Feature</NeonButton>
+                </div>
+              )}
+
               {/* Add Portfolio Form */}
-              {showAddPortfolio && (
+              {showAddPortfolio && planFeatures.portfolio && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -821,10 +908,23 @@ const ProfileEditor = () => {
                     />
                     <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 transition-colors ${newPortfolioItem.imageUrl ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/50'}`}>
                       {newPortfolioItem.imageUrl ? (
-                        <>
+                        <div className="flex items-center gap-2">
                           <Image className="w-4 h-4 text-primary" />
-                          <span className="text-primary font-medium">Image Uploaded (Click to change)</span>
-                        </>
+                          <span className="text-primary font-medium">Image Uploaded</span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (newPortfolioItem.imageUrl) {
+                                await storageService.deleteImage(newPortfolioItem.imageUrl);
+                                setNewPortfolioItem(prev => ({ ...prev, imageUrl: "" }));
+                                toast.success("Image removed");
+                              }
+                            }}
+                            className="p-1 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-colors relative z-20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       ) : (
                         <>
                           <Image className="w-4 h-4 text-muted-foreground" />
@@ -892,16 +992,30 @@ const ProfileEditor = () => {
             </GlassCard>
 
             {/* Private Content Section */}
-            <GlassCard className="p-6" variant="neon">
+            <GlassCard className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-primary" />
-                  Private Content
-                </h2>
+                <div>
+                  <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-primary" />
+                    Private Content
+                  </h2>
+                </div>
                 <NeonButton
                   variant={editingPrivateId ? "primary" : "outline"}
                   size="sm"
                   onClick={() => {
+                    if (!planFeatures.privateContent) {
+                      setUpgradeReason("Private Content is not included in your current plan.");
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+
+                    if (privateContents.length >= maxPrivateContentItems && !editingPrivateId) {
+                      setUpgradeReason(`You've reached the limit of ${maxPrivateContentItems} private content items.`);
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+
                     if (!pinEnabled || !pin) {
                       toast.error("Please enable PIN lock and set a PIN first");
                       return;
@@ -919,6 +1033,19 @@ const ProfileEditor = () => {
                   {editingPrivateId && showAddPrivate ? "Editing Content" : "Add Content"}
                 </NeonButton>
               </div>
+
+              {/* Lock Warning for Private Content */}
+              {!planFeatures.privateContent && privateContents.length === 0 && (
+                <div className="p-8 text-center border border-white/10 rounded-xl bg-muted/20 flex flex-col items-center gap-2 mb-6">
+                  <Lock className="w-8 h-8 text-muted-foreground" />
+                  <h3 className="font-bold">Private Mode Locked</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Upgrade to share exclusive content behind a PIN.</p>
+                  <NeonButton size="sm" onClick={() => {
+                    setUpgradeReason("Upgrade to unlock Private Content features.");
+                    setShowUpgradeModal(true);
+                  }}>Unlock Feature</NeonButton>
+                </div>
+              )}
 
               <p className="text-sm text-muted-foreground mb-4">
                 This content will only be visible to visitors who enter the correct PIN.
@@ -1021,10 +1148,23 @@ const ProfileEditor = () => {
                     />
                     <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 transition-colors ${newPrivateContent.imageUrl ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/50'}`}>
                       {newPrivateContent.imageUrl ? (
-                        <>
+                        <div className="flex items-center gap-2">
                           <Image className="w-4 h-4 text-primary" />
-                          <span className="text-primary font-medium">Image Uploaded (Click to change)</span>
-                        </>
+                          <span className="text-primary font-medium">Image Uploaded</span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (newPrivateContent.imageUrl) {
+                                await storageService.deleteImage(newPrivateContent.imageUrl);
+                                setNewPrivateContent(prev => ({ ...prev, imageUrl: "" }));
+                                toast.success("Image removed");
+                              }
+                            }}
+                            className="p-1 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-colors relative z-20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       ) : (
                         <>
                           <Image className="w-4 h-4 text-muted-foreground" />
@@ -1106,8 +1246,8 @@ const ProfileEditor = () => {
           onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
           message={errorAlert.message}
         />
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

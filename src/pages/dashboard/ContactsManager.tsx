@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { Link } from "react-router-dom"; // Added for profile linking
 import {
   Users, Search, Download, Mail, Phone, MapPin, Calendar,
-  MoreVertical, Eye, Trash2, X, Building, Globe
+  MoreVertical, Eye, Trash2, X, Building, Globe, ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -18,6 +19,9 @@ import {
 import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscriptionLimits } from "@/hooks/useSubscriptionLimits";
+import { UpgradeModal } from "@/components/dashboard/UpgradeModal";
+import { usageService } from "@/services/usageService";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 
 interface Contact {
@@ -30,41 +34,40 @@ interface Contact {
   source: string;
   savedAt: Date;
   notes?: string;
+  originalProfileId?: string; // Link back to public profile
 }
 
-const initialContacts: Contact[] = [];
+import { useDashboard } from "@/contexts/DashboardContext";
+
+// ... imports
 
 const ContactsManager = () => {
   const { currentUser } = useAuth();
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
+  const { contacts: contextContacts } = useDashboard();
+
+  // Transform context data to Contact interface
+  const contacts = useMemo(() => {
+    return contextContacts.map(data => ({
+      id: data.id,
+      name: data.name || "Unknown Contact",
+      email: data.email || "",
+      phone: data.phone || "",
+      company: data.company || "",
+      location: data.location || "",
+      source: data.source || "web",
+      savedAt: data.savedAt?.toDate ? data.savedAt.toDate() : new Date(),
+      notes: data.notes || "",
+      originalProfileId: data.originalProfileId || ""
+    })) as Contact[];
+  }, [contextContacts]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
 
-  // Simulating profile public status - in real app this would come from user settings
   const isProfilePublic = true;
 
-  // Load Contacts
-  useEffect(() => {
-    if (!currentUser) return;
-    const fetchContacts = async () => {
-      try {
-        const q = query(collection(db, "users", currentUser.uid, "contacts"), orderBy("savedAt", "desc"));
-        const snapshot = await getDocs(q);
-        const fetchedContacts = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          savedAt: doc.data().savedAt?.toDate() || new Date(),
-        })) as Contact[];
-        setContacts(fetchedContacts);
-      } catch (error) {
-        console.error("Error fetching contacts:", error);
-        setErrorAlert({ isOpen: true, message: "Failed to load contacts" });
-      }
-    };
-    fetchContacts();
-  }, [currentUser]);
 
   const filteredContacts = useMemo(() => {
     if (!searchQuery) return contacts;
@@ -100,7 +103,6 @@ const ContactsManager = () => {
     if (!currentUser) return;
     try {
       await deleteDoc(doc(db, "users", currentUser.uid, "contacts", contactId));
-      setContacts(contacts.filter(c => c.id !== contactId));
       toast.success("Contact deleted");
       if (selectedContact?.id === contactId) setSelectedContact(null);
     } catch (error) {
@@ -112,14 +114,11 @@ const ContactsManager = () => {
   const deleteSelected = async () => {
     if (!currentUser) return;
     try {
-      // Sequentially delete for now (simpler than batch if small number, or use batch for robustness)
-      // Using Promise.all for parallel
       const deletePromises = Array.from(selectedIds).map(id =>
         deleteDoc(doc(db, "users", currentUser.uid, "contacts", id))
       );
       await Promise.all(deletePromises);
 
-      setContacts(contacts.filter((c) => !selectedIds.has(c.id)));
       toast.success(`Deleted ${selectedIds.size} contacts`);
       setSelectedIds(new Set());
     } catch (error) {
@@ -129,13 +128,12 @@ const ContactsManager = () => {
   };
 
   const exportToCSV = (contactsToExport: Contact[]) => {
-    // Simplified CSV: Contact name, Email, Date, Phone (only if profile public), Company, Location
     const headers = ["Contact", "Email", "Date", "Phone", "Company", "Location"];
     const rows = contactsToExport.map((contact) => [
       contact.name,
       contact.email,
       contact.savedAt.toLocaleDateString(),
-      isProfilePublic ? contact.phone : "", // Only include phone if profile is public
+      isProfilePublic ? contact.phone : "",
       contact.company,
       contact.location,
     ]);
@@ -197,8 +195,8 @@ const ContactsManager = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats - Removed This Week and Locations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <GlassCard className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary">
@@ -210,23 +208,7 @@ const ContactsManager = () => {
             </div>
           </div>
         </GlassCard>
-        <GlassCard className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-success/10 text-success">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">
-                {contacts.filter((c) => {
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  return c.savedAt >= weekAgo;
-                }).length}
-              </p>
-              <p className="text-sm text-muted-foreground">This Week</p>
-            </div>
-          </div>
-        </GlassCard>
+
         <GlassCard className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-accent/10 text-accent">
@@ -234,22 +216,9 @@ const ContactsManager = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">
-                {new Set(contacts.map((c) => c.company)).size}
+                {new Set(contacts.map((c) => (c.company || "").trim().toLowerCase()).filter(c => c)).size}
               </p>
               <p className="text-sm text-muted-foreground">Companies</p>
-            </div>
-          </div>
-        </GlassCard>
-        <GlassCard className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-warning/10 text-warning">
-              <Globe className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">
-                {new Set(contacts.map((c) => c.location.split(",")[1]?.trim())).size}
-              </p>
-              <p className="text-sm text-muted-foreground">Locations</p>
             </div>
           </div>
         </GlassCard>
@@ -264,6 +233,7 @@ const ContactsManager = () => {
             placeholder="Search contacts by name, email, company..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            autoComplete="off"
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
           />
         </div>
@@ -284,10 +254,11 @@ const ContactsManager = () => {
                   />
                 </th>
                 <th className="text-left p-4 font-semibold text-foreground">Contact</th>
-                <th className="text-left p-4 font-semibold text-foreground hidden md:table-cell">Company</th>
-                <th className="text-left p-4 font-semibold text-foreground hidden lg:table-cell">Location</th>
-                <th className="text-left p-4 font-semibold text-foreground hidden lg:table-cell">Source</th>
-                <th className="text-left p-4 font-semibold text-foreground">Date</th>
+                <th className="text-left p-4 font-semibold text-foreground hidden md:table-cell">Email</th>
+                <th className="text-left p-4 font-semibold text-foreground hidden md:table-cell">Phone</th>
+                <th className="text-left p-4 font-semibold text-foreground hidden lg:table-cell">Company</th>
+                <th className="text-left p-4 font-semibold text-foreground hidden xl:table-cell">Location</th>
+                <th className="text-left p-4 font-semibold text-foreground">Saved Date</th>
                 <th className="p-4 w-12"></th>
               </tr>
             </thead>
@@ -310,23 +281,33 @@ const ContactsManager = () => {
                   </td>
                   <td className="p-4">
                     <div>
-                      <p className="font-medium text-foreground">{contact.name}</p>
-                      <p className="text-sm text-muted-foreground">{contact.email}</p>
+                      {contact.originalProfileId ? (
+                        <Link to={`/u/${contact.originalProfileId}`} className="font-medium text-foreground hover:text-primary transition-colors hover:underline">
+                          {contact.name}
+                        </Link>
+                      ) : (
+                        <p className="font-medium text-foreground">{contact.name}</p>
+                      )}
+                      {/* Mobile only fallback for email */}
+                      <p className="text-sm text-muted-foreground md:hidden">{contact.email}</p>
                     </div>
                   </td>
                   <td className="p-4 hidden md:table-cell">
+                    <span className="text-muted-foreground text-sm">{contact.email}</span>
+                  </td>
+                  <td className="p-4 hidden md:table-cell">
+                    <span className="text-muted-foreground text-sm">{contact.phone}</span>
+                  </td>
+                  <td className="p-4 hidden lg:table-cell">
                     <span className="text-foreground">{contact.company}</span>
                   </td>
-                  <td className="p-4 hidden lg:table-cell">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span>{contact.location}</span>
-                    </div>
-                  </td>
-                  <td className="p-4 hidden lg:table-cell">
-                    <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-sm">
-                      {contact.source}
-                    </span>
+                  <td className="p-4 hidden xl:table-cell">
+                    {contact.location && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-4 h-4" />
+                        <span>{contact.location}</span>
+                      </div>
+                    )}
                   </td>
                   <td className="p-4">
                     <span className="text-muted-foreground text-sm">
@@ -345,6 +326,12 @@ const ContactsManager = () => {
                           <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
+                        {contact.originalProfileId && (
+                          <DropdownMenuItem onClick={() => window.open(`/u/${contact.originalProfileId}`, '_blank')}>
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            Visit Profile
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => exportToCSV([contact])}>
                           <Download className="w-4 h-4 mr-2" />
                           Export
@@ -429,7 +416,7 @@ const ContactsManager = () => {
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-muted">
                     <Calendar className="w-5 h-5 text-primary" />
                     <div>
-                      <p className="text-xs text-muted-foreground">Saved via {selectedContact.source}</p>
+                      <p className="text-xs text-muted-foreground">Saved On</p>
                       <p className="text-foreground">{selectedContact.savedAt.toLocaleDateString()}</p>
                     </div>
                   </div>

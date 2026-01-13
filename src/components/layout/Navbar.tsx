@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NeonButton } from "../ui/NeonButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { name: "Home", path: "/" },
@@ -15,6 +16,7 @@ const navItems = [
 ];
 
 export const Navbar = () => {
+  const { currentUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
@@ -50,10 +52,10 @@ export const Navbar = () => {
               whileHover={{ scale: 1.1 }}
               transition={{ duration: 0.3 }}
             >
-              <img src="/nxcverse.svg" alt="NXC Verse Logo" className="w-full h-full object-contain" />
+              <img src="/nxcverse.svg" alt="NXC Badge Verse Logo" className="w-full h-full object-contain" />
             </motion.div>
             <span className="font-display text-xl font-bold text-foreground">
-              NXC <span className="text-primary">Badge</span>
+              NXC <span className="text-primary">Badge Verse</span>
             </span>
           </Link>
 
@@ -77,16 +79,26 @@ export const Navbar = () => {
 
           {/* Auth Buttons */}
           <div className="hidden lg:flex items-center gap-3">
-            <Link to="/login">
-              <NeonButton variant="ghost" size="sm" glow={false}>
-                Login
-              </NeonButton>
-            </Link>
-            <Link to="/signup">
-              <NeonButton variant="primary" size="sm">
-                Get Started
-              </NeonButton>
-            </Link>
+            {currentUser ? (
+              <Link to="/dashboard">
+                <NeonButton variant="primary" size="sm">
+                  Dashboard
+                </NeonButton>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <NeonButton variant="ghost" size="sm" glow={false}>
+                    Login
+                  </NeonButton>
+                </Link>
+                <Link to="/signup">
+                  <NeonButton variant="primary" size="sm">
+                    Get Started
+                  </NeonButton>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -130,16 +142,26 @@ export const Navbar = () => {
                 </motion.div>
               ))}
               <div className="pt-4 flex flex-col gap-3">
-                <Link to="/login">
-                  <NeonButton variant="outline" className="w-full">
-                    Login
-                  </NeonButton>
-                </Link>
-                <Link to="/signup">
-                  <NeonButton variant="primary" className="w-full">
-                    Get Started
-                  </NeonButton>
-                </Link>
+                {currentUser ? (
+                  <Link to="/dashboard">
+                    <NeonButton variant="primary" className="w-full">
+                      Dashboard
+                    </NeonButton>
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/login">
+                      <NeonButton variant="outline" className="w-full">
+                        Login
+                      </NeonButton>
+                    </Link>
+                    <Link to="/signup">
+                      <NeonButton variant="primary" className="w-full">
+                        Get Started
+                      </NeonButton>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

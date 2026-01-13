@@ -5,8 +5,9 @@ import { GradientText } from "@/components/ui/GradientText";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Link } from "react-router-dom";
 import { ChevronDown, Search, MessageCircle } from "lucide-react";
+import { useContent } from "@/hooks/useContent";
 
-const faqCategories = [
+const defaultCategories = [
   {
     name: "General",
     faqs: [
@@ -20,7 +21,7 @@ const faqCategories = [
       },
       {
         question: "Do people need to download an app to view my profile?",
-        answer: "No! That's the beauty of NXC Badge. Your profile opens directly in the browser - no app required. This means anyone can view your profile regardless of what phone they have.",
+        answer: "No! That's the beauty of NXC Badge Verse. Your profile opens directly in the browser - no app required. This means anyone can view your profile regardless of what phone they have.",
       },
     ],
   },
@@ -130,7 +131,16 @@ const FAQItem = ({ faq }: { faq: { question: string; answer: string } }) => {
 
 const FAQs = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("General");
+  const { content } = useContent('faqs', { categories: defaultCategories });
+
+  const categories: any[] = content?.categories || defaultCategories;
+
+  // Ensure we have a valid selection fallback
+  const firstCategory = categories?.[0]?.name || "General";
+  const [selectedCategory, setSelectedCategory] = useState(firstCategory);
+
+  // Update selected if first load changes things and selected is not found
+  // (Optional refinement but default state handles most cases)
 
   return (
     <div className="pt-20">
@@ -151,7 +161,7 @@ const FAQs = () => {
               <GradientText animate>Questions</GradientText>
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
-              Find answers to common questions about NXC Badge
+              Find answers to common questions about NXC Badge Verse
             </p>
 
             {/* Search */}
@@ -176,13 +186,13 @@ const FAQs = () => {
             {/* Categories */}
             <div className="lg:col-span-1">
               <div className="sticky top-24 space-y-2">
-                {faqCategories.map((category) => (
+                {categories.map((category: any) => (
                   <button
                     key={category.name}
                     onClick={() => setSelectedCategory(category.name)}
                     className={`w-full text-left px-4 py-3 rounded-xl transition-all ${selectedCategory === category.name
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                   >
                     {category.name}
@@ -193,9 +203,9 @@ const FAQs = () => {
 
             {/* FAQs */}
             <div className="lg:col-span-3">
-              {faqCategories
-                .filter((cat) => cat.name === selectedCategory)
-                .map((category) => (
+              {categories
+                .filter((cat: any) => cat.name === selectedCategory)
+                .map((category: any) => (
                   <motion.div
                     key={category.name}
                     initial={{ opacity: 0, y: 20 }}
@@ -205,7 +215,7 @@ const FAQs = () => {
                       <h2 className="text-2xl font-bold font-display text-foreground mb-6">
                         {category.name}
                       </h2>
-                      {category.faqs.map((faq, index) => (
+                      {category.faqs.map((faq: any, index: number) => (
                         <FAQItem key={index} faq={faq} />
                       ))}
                     </GlassCard>

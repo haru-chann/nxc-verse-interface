@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,11 +33,26 @@ import InteractionLog from "./pages/dashboard/InteractionLog";
 import ContactsManager from "./pages/dashboard/ContactsManager";
 import Settings from "./pages/dashboard/Settings";
 import CardLink from "./pages/dashboard/CardLink";
+import Checkout from "@/pages/dashboard/Checkout";
+import { CustomizeOrder } from "@/pages/dashboard/CustomizeOrder";
+import { EditOrder } from "@/pages/dashboard/EditOrder";
+import MyCards from "@/pages/dashboard/MyCards";
+
+import AdminOrders from "./pages/admin/Orders";
+import { RequireAdmin } from "./components/auth/RequireAdmin";
+import { AdminRoute } from "./components/auth/AdminRoute";
+import { AdminLayout } from "./components/layout/AdminLayout";
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import AdminCMS from "./pages/admin/CMS";
+import { AdminUsers } from "./pages/admin/Users";
+import { FormBuilder } from "./pages/admin/FormBuilder";
+import { AdminPlans } from "./pages/admin/AdminPlans";
+import { AdminReports } from "./pages/admin/Reports";
 
 const queryClient = new QueryClient();
 
 
-import { useEffect } from "react";
+
 
 const App = () => {
   useEffect(() => {
@@ -120,6 +136,24 @@ const App = () => {
                   <Route path="contacts" element={<ContactsManager />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="card-link" element={<CardLink />} />
+                  <Route path="checkout" element={<Checkout />} />
+                  <Route path="/dashboard/customize/:planId" element={<CustomizeOrder />} />
+                  <Route path="/dashboard/edit-order/:orderId" element={<EditOrder />} />
+                  <Route path="/dashboard/checkout" element={<Checkout />} />
+                  <Route path="my-cards" element={<MyCards />} />
+                </Route>
+              </Route>
+
+              {/* Admin Routes */}
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="users" element={<AdminUsers />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="forms" element={<FormBuilder />} />
+                  <Route path="plans" element={<AdminPlans />} />
+                  <Route path="reports" element={<AdminReports />} />
+                  <Route path="cms" element={<AdminCMS />} />
                 </Route>
               </Route>
 

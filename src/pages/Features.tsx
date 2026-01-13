@@ -189,7 +189,7 @@ const Features = () => {
               Ready to Experience the <GradientText>Future?</GradientText>
             </h2>
             <p className="text-xl text-muted-foreground mb-8">
-              Join thousands of professionals already using NXC Badge
+              Join thousands of professionals already using NXC Badge Verse
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link to="/pricing">
