@@ -428,7 +428,7 @@ const Checkout = () => {
                                 onClick={handleRazorpayPayment}
                                 disabled={loading}
                             >
-                                {loading ? "Processing..." : "Pay with Razorpay"}
+                                {loading ? "Processing..." : "Pay"}
                             </NeonButton>
 
 
