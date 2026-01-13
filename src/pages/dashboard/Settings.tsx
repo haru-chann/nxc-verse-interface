@@ -640,68 +640,7 @@ const Settings = () => {
         type="danger"
         loading={deleteLoading}
       />
-      {/* Developer Zone */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <GlassCard className="p-8 border-primary/20 bg-primary/5">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 rounded-xl bg-primary/20 text-primary">
-              <Code className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold font-display text-foreground">Developer Zone</h2>
-              <p className="text-sm text-muted-foreground">Advanced settings for developers</p>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl bg-background/50 border border-white/5">
-            <div>
-              <div className="font-medium text-foreground mb-1">Role Management</div>
-              <div className="text-xs text-muted-foreground">
-                Current Role: <span className="text-primary font-bold">
-                  {useAuth().isSuperAdmin ? "Super Admin" : useAuth().isAdmin ? "Admin" : "User"}
-                </span>
-              </div>
-              <div className="text-[10px] text-muted-foreground mt-1 font-mono">
-                Claims: {JSON.stringify({ admin: useAuth().isAdmin, super_admin: useAuth().isSuperAdmin })}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={async () => {
-                  const { dismiss } = toast({
-                    title: "Refreshing Permissions...",
-                    description: "Please wait a moment",
-                  });
-                  try {
-                    await useAuth().refreshClaims();
-                    dismiss();
-                    toast({
-                      title: "Permissions Refreshed!",
-                      description: "Your session has been updated.",
-                    });
-                    // Force reload to ensure all components see it
-                    window.location.reload();
-                  } catch (e) {
-                    dismiss();
-                    toast({
-                      title: "Failed to refresh",
-                      description: "Could not update permissions.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                className="px-4 py-2 rounded-lg bg-primary/20 text-primary text-sm font-bold hover:bg-primary/30 transition-colors"
-              >
-                Refresh Permissions
-              </button>
-            </div>
-          </div>
-        </GlassCard>
-      </motion.div>
 
       <ErrorAlert
         isOpen={errorAlert.isOpen}

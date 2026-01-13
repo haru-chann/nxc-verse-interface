@@ -148,37 +148,7 @@ const Checkout = () => {
         });
     };
 
-    const handleMockPayment = async () => {
-        if (!validateFields()) return;
-        if (!currentUser) {
-            toast.error("Please sign in to continue.");
-            navigate("/login");
-            return;
-        }
 
-        setLoading(true);
-        const toastId = toast.loading("Processing Mock Payment...");
-
-        try {
-            await currentUser.getIdToken(true);
-            const verifyMockPurchase = httpsCallable(functions, 'verifyMockPurchase');
-
-            await verifyMockPurchase({
-                planId: selectedPlan?.id || "unknown",
-                shippingDetails,
-                customization: location.state?.customizationData || {},
-                formSnapshot: location.state?.formFields || []
-            });
-
-            toast.dismiss(toastId);
-            toast.success("Mock Payment Successful!");
-            setTimeout(() => navigate("/dashboard/my-cards"), 2000);
-
-        } catch (error: any) {
-            toast.dismiss(toastId);
-            handlePaymentError(error, "Mock Payment");
-        }
-    };
 
     const handleRazorpayPayment = async () => {
         if (!validateFields()) return;
@@ -461,16 +431,7 @@ const Checkout = () => {
                                 {loading ? "Processing..." : "Pay with Razorpay"}
                             </NeonButton>
 
-                            <div className="text-center text-xs text-muted-foreground uppercase tracking-widest my-2">- OR -</div>
 
-                            <button
-                                onClick={handleMockPayment}
-                                disabled={loading}
-                                className="w-full py-3 rounded-xl bg-secondary/80 hover:bg-secondary text-secondary-foreground font-medium transition-colors flex items-center justify-center gap-2"
-                            >
-                                <ShieldCheck className="w-4 h-4" />
-                                Mock Pay (Test Mode)
-                            </button>
                         </div>
 
                         <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
