@@ -67,11 +67,11 @@ export const HeroSection = () => {
                   Get Your Badge
                 </NeonButton>
               </Link>
-              <div onClick={() => toast.info("Coming Soon!!")} className="cursor-pointer">
+              <Link to="/pricing">
                 <NeonButton variant="outline" size="lg" glow={false}>
                   Shop Cards
                 </NeonButton>
-              </div>
+              </Link>
             </div>
 
             {/* Stats */}

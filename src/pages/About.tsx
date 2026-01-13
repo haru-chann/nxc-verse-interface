@@ -122,7 +122,7 @@ const About = () => {
             <p className="text-xl text-muted-foreground">What drives us every day</p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
             {values.map((value: any, index: number) => {
               const Icon = getIcon(value.title, index);
               return (
@@ -132,6 +132,7 @@ const About = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
+                  className="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)]"
                 >
                   <GlassCard variant="hover" className="p-6 h-full text-center">
                     <motion.div

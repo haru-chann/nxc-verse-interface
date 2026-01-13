@@ -23,14 +23,7 @@ interface FooterLinks {
 const footerLinks: FooterLinks = {
   product: [
     { name: "Features", path: "/features" },
-    {
-      name: "Order Card",
-      path: "#",
-      onClick: (e) => {
-        e.preventDefault();
-        toast.info("Coming Soon!!");
-      }
-    }
+    { name: "Order Card", path: "/pricing" },
   ],
   company: [
     { name: "About", path: "/about" },
