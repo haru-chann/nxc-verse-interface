@@ -14,6 +14,7 @@ export const AdminPlans = () => {
     const [plans, setPlans] = useState<Plan[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+    const [initialEditingPlan, setInitialEditingPlan] = useState<Plan | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const [cmsProducts, setCmsProducts] = useState<any[]>([]);
@@ -42,6 +43,7 @@ export const AdminPlans = () => {
 
     const handleEdit = (plan: Plan) => {
         setEditingPlan({ ...plan });
+        setInitialEditingPlan({ ...plan });
         setIsModalOpen(true);
     };
 
@@ -58,6 +60,7 @@ export const AdminPlans = () => {
             isActive: true
         };
         setEditingPlan(newPlan);
+        setInitialEditingPlan(newPlan);
         setIsModalOpen(true);
     };
 
@@ -406,7 +409,7 @@ export const AdminPlans = () => {
 
                             <div className="p-6 border-t border-white/10 flex justify-end gap-3 bg-white/5">
                                 <NeonButton variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</NeonButton>
-                                <NeonButton onClick={handleSave}>
+                                <NeonButton onClick={handleSave} disabled={JSON.stringify(editingPlan) === JSON.stringify(initialEditingPlan)}>
                                     <Save className="w-4 h-4 mr-2" />
                                     Save Changes
                                 </NeonButton>

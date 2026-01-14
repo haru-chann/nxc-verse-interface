@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Save, ChevronDown, ChevronUp } from "lucide-react";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { FloatingSaveBar } from "@/components/ui/FloatingSaveBar";
 
 interface FAQItem {
     question: string;
@@ -81,9 +82,12 @@ const defaultFAQs: FAQCategory[] = [
 
 export const CMSFAQs = () => {
     const [categories, setCategories] = useState<FAQCategory[]>([]);
+    const [initialCategories, setInitialCategories] = useState<FAQCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState<number | null>(0);
+
+    const isDirty = JSON.stringify(categories) !== JSON.stringify(initialCategories);
 
     useEffect(() => {
         fetchFAQs();
@@ -96,8 +100,10 @@ export const CMSFAQs = () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().categories) {
                 setCategories(docSnap.data().categories);
+                setInitialCategories(docSnap.data().categories);
             } else {
                 setCategories(defaultFAQs);
+                setInitialCategories(defaultFAQs);
             }
         } catch (error) {
             console.error(error);
@@ -112,6 +118,7 @@ export const CMSFAQs = () => {
         try {
             await setDoc(doc(db, "site_content", "faqs"), { categories }, { merge: true });
             toast.success("FAQs updated!");
+            setInitialCategories(categories);
         } catch (error) {
             console.error(error);
             toast.error("Failed to save changes");
@@ -165,10 +172,6 @@ export const CMSFAQs = () => {
         <div className="space-y-8">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold font-display">Manage FAQs</h2>
-                <NeonButton onClick={handleSave} disabled={saving}>
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Changes
-                </NeonButton>
             </div>
 
             <div className="space-y-4">
@@ -239,6 +242,12 @@ export const CMSFAQs = () => {
                     <Plus className="w-5 h-5" /> Add New Category
                 </button>
             </div>
+
+            <FloatingSaveBar
+                isOpen={isDirty}
+                onSave={handleSave}
+                loading={saving}
+            />
         </div>
     );
 };

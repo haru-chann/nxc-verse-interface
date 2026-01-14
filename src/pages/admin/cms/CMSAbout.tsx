@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, Save, Plus, Trash2 } from "lucide-react";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { FloatingSaveBar } from "@/components/ui/FloatingSaveBar";
 
 const defaultAbout = {
     story: [
@@ -27,8 +28,11 @@ const defaultAbout = {
 
 export const CMSAbout = () => {
     const [content, setContent] = useState<any>(defaultAbout);
+    const [initialContent, setInitialContent] = useState<any>(defaultAbout);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    const isDirty = JSON.stringify(content) !== JSON.stringify(initialContent);
 
     useEffect(() => {
         fetchContent();
@@ -41,6 +45,7 @@ export const CMSAbout = () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 setContent(docSnap.data());
+                setInitialContent(docSnap.data());
             }
         } catch (error) {
             console.error(error);
@@ -55,6 +60,7 @@ export const CMSAbout = () => {
         try {
             await setDoc(doc(db, "site_content", "about"), content, { merge: true });
             toast.success("About content updated!");
+            setInitialContent(content);
         } catch (error) {
             console.error(error);
             toast.error("Failed to save changes");
@@ -62,6 +68,8 @@ export const CMSAbout = () => {
             setSaving(false);
         }
     };
+
+    // ... (helper functions omitted, check target content range)
 
     const updateStoryParagraph = (index: number, value: string) => {
         const newStory = [...(content.story || [])];
@@ -115,10 +123,6 @@ export const CMSAbout = () => {
         <div className="space-y-8">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold font-display">Manage About Page</h2>
-                <NeonButton onClick={handleSave} disabled={saving}>
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Changes
-                </NeonButton>
             </div>
 
             {/* Story Section */}
@@ -210,6 +214,12 @@ export const CMSAbout = () => {
                     <Plus className="w-4 h-4" /> Add Team Member
                 </button>
             </GlassCard>
+
+            <FloatingSaveBar
+                isOpen={isDirty}
+                onSave={handleSave}
+                loading={saving}
+            />
         </div>
     );
 };

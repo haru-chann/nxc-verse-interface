@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { userService, UserProfile } from "@/services/userService";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { FloatingSaveBar } from "@/components/ui/FloatingSaveBar";
 
 import { User, Link as LinkIcon, Image, Plus, GripVertical, Trash2, Save, Building, MapPin, Phone, Globe, Lock, Briefcase, Eye, EyeOff, Pencil } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -469,785 +470,783 @@ const ProfileEditor = () => {
           description={upgradeReason}
         />
 
-        <div className="flex items-center justify-between sticky top-0 z-50 bg-background/80 backdrop-blur-md py-4 px-4 lg:px-8 border-b border-border/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between sticky top-16 lg:top-0 z-40 bg-background/80 backdrop-blur-md py-4 px-4 lg:px-8 border-b border-border/50 gap-4">
           <div>
-            <h1 className="text-3xl font-bold font-display text-foreground">Profile Editor</h1>
-            <p className="text-muted-foreground mt-1">Customize your digital identity</p>
+            <h1 className="text-2xl lg:text-3xl font-bold font-display text-foreground">Profile Editor</h1>
+            <p className="text-sm lg:text-base text-muted-foreground mt-1">Customize your digital identity</p>
           </div>
-          {hasUnsavedChanges && (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-              <NeonButton onClick={handleSave}>
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-              </NeonButton>
-            </motion.div>
-          )}
         </div>
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 px-4 lg:px-8 pb-8">
-          {/* Main Editor */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Info */}
-            <GlassCard className="p-6">
-              <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
-                <User className="w-5 h-5 text-primary" />
-                Basic Information
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden relative group">
-                    {profileData.photoURL ? (
-                      <img src={profileData.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-3xl font-bold text-primary-foreground">
-                        {profileData.displayName?.charAt(0).toUpperCase() || currentUser?.email?.charAt(0).toUpperCase()}
-                      </span>
-                    )}
+      <div className="grid lg:grid-cols-3 gap-8 px-4 lg:px-8 pb-8">
+        {/* Main Editor */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Basic Info */}
+          <GlassCard className="p-6">
+            <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Basic Information
+            </h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-6">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center overflow-hidden relative group">
+                  {profileData.photoURL ? (
+                    <img src={profileData.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl font-bold text-primary-foreground">
+                      {profileData.displayName?.charAt(0).toUpperCase() || currentUser?.email?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
 
-                    {profileData.photoURL && (
-                      <button
-                        onClick={handleRemovePhoto}
-                        className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                      >
-                        <Trash2 className="w-6 h-6 text-destructive" />
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <NeonButton variant="outline" size="sm" className="pointer-events-none">Change Photo</NeonButton>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">JPG, PNG up to 5MB</p>
-                  </div>
+                  {profileData.photoURL && (
+                    <button
+                      onClick={handleRemovePhoto}
+                      className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                    >
+                      <Trash2 className="w-6 h-6 text-destructive" />
+                    </button>
+                  )}
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Display Name</label>
-                    <input
-                      type="text"
-                      value={profileData.displayName}
-                      onChange={(e) => setProfileData({ ...profileData, displayName: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                      placeholder="Display Name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Title</label>
-                    <input
-                      type="text"
-                      value={profileData.title || ""}
-                      onChange={(e) => {
-                        setProfileData({ ...profileData, title: e.target.value });
-                      }}
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                      placeholder="Job Title"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">First Name</label>
-                    <input
-                      type="text"
-                      value={profileData.firstName}
-                      onChange={(e) => {
-                        setProfileData({ ...profileData, firstName: e.target.value });
-                      }}
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                      placeholder="First Name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Last Name</label>
-                    <input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) => {
-                        setProfileData({ ...profileData, lastName: e.target.value });
-                      }}
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                      placeholder="Last Name"
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Email (Optional)</label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <NeonButton variant="outline" size="sm" className="pointer-events-none">Change Photo</NeonButton>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">JPG, PNG up to 5MB</p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Display Name</label>
                   <input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    placeholder="name@example.com"
+                    type="text"
+                    value={profileData.displayName}
+                    onChange={(e) => setProfileData({ ...profileData, displayName: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="Display Name"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Bio</label>
-                  <textarea
-                    rows={3}
-                    value={profileData.bio}
+                  <label className="block text-sm font-medium text-foreground mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={profileData.title || ""}
                     onChange={(e) => {
-                      setProfileData({ ...profileData, bio: e.target.value });
+                      setProfileData({ ...profileData, title: e.target.value });
                     }}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none"
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="Job Title"
                   />
                 </div>
               </div>
-            </GlassCard>
 
-            {/* Contact & Company Info */}
-            <GlassCard className="p-6">
-              <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
-                <Building className="w-5 h-5 text-primary" />
-                Contact & Company
-              </h2>
-              <div className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                      <Building className="w-4 h-4 text-muted-foreground" />
-                      Company Name
-                    </label>
-                    <input
-                      name="company"
-                      autoComplete="organization"
-                      type="text"
-                      value={profileData.company}
-                      onChange={(e) => {
-                        setProfileData({ ...profileData, company: e.target.value });
-                      }}
-                      placeholder="Your company name"
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      Location
-                    </label>
-                    <input
-                      name="location"
-                      autoComplete="address-level2"
-                      type="text"
-                      value={profileData.location}
-                      onChange={(e) => {
-                        setProfileData({ ...profileData, location: e.target.value });
-                      }}
-                      placeholder="City, Country"
-                      className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                    />
-                  </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">First Name</label>
+                  <input
+                    type="text"
+                    value={profileData.firstName}
+                    onChange={(e) => {
+                      setProfileData({ ...profileData, firstName: e.target.value });
+                    }}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="First Name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    value={profileData.lastName}
+                    onChange={(e) => {
+                      setProfileData({ ...profileData, lastName: e.target.value });
+                    }}
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    placeholder="Last Name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Email (Optional)</label>
+                <input
+                  type="email"
+                  value={profileData.email}
+                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                  placeholder="name@example.com"
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Bio</label>
+                <textarea
+                  rows={3}
+                  value={profileData.bio}
+                  onChange={(e) => {
+                    setProfileData({ ...profileData, bio: e.target.value });
+                  }}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground resize-none"
+                />
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Contact & Company Info */}
+          <GlassCard className="p-6">
+            <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
+              <Building className="w-5 h-5 text-primary" />
+              Contact & Company
+            </h2>
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Building className="w-4 h-4 text-muted-foreground" />
+                    Company Name
+                  </label>
+                  <input
+                    name="company"
+                    autoComplete="organization"
+                    type="text"
+                    value={profileData.company}
+                    onChange={(e) => {
+                      setProfileData({ ...profileData, company: e.target.value });
+                    }}
+                    placeholder="Your company name"
+                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    Phone Number
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    Location
                   </label>
                   <input
-                    name="phone"
-                    autoComplete="tel"
-                    type="tel"
-                    value={profileData.phone}
+                    name="location"
+                    autoComplete="address-level2"
+                    type="text"
+                    value={profileData.location}
                     onChange={(e) => {
-                      setProfileData({ ...profileData, phone: e.target.value });
+                      setProfileData({ ...profileData, location: e.target.value });
                     }}
-                    placeholder="+1 555-123-4567"
+                    placeholder="City, Country"
                     className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Phone number will only be included in CSV exports if your profile is public.
-                  </p>
                 </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  Phone Number
+                </label>
+                <input
+                  name="phone"
+                  autoComplete="tel"
+                  type="tel"
+                  value={profileData.phone}
+                  onChange={(e) => {
+                    setProfileData({ ...profileData, phone: e.target.value });
+                  }}
+                  placeholder="+1 555-123-4567"
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Phone number will only be included in CSV exports if your profile is public.
+                </p>
+              </div>
 
-                {/* Public Profile Toggle */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border">
-                  <div className="flex items-center gap-3">
-                    <Globe className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">Public Profile</p>
-                      <p className="text-sm text-muted-foreground">Allow anyone to view your profile and include phone in exports</p>
-                    </div>
+              {/* Public Profile Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <Globe className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-foreground">Public Profile</p>
+                    <p className="text-sm text-muted-foreground">Allow anyone to view your profile and include phone in exports</p>
                   </div>
-                  <Switch checked={isPublic} onCheckedChange={(checked) => {
-                    setIsPublic(checked);
+                </div>
+                <Switch checked={isPublic} onCheckedChange={(checked) => {
+                  setIsPublic(checked);
 
-                  }} />
+                }} />
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Links */}
+          <GlassCard className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-primary" />
+                Links
+              </h2>
+              <NeonButton variant="outline" size="sm" onClick={handleAddLink}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Link
+              </NeonButton>
+            </div>
+            <div className="space-y-3">
+              {links.map((link) => (
+                <motion.div
+                  key={link.id}
+                  className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 group"
+                  layout
+                >
+                  <GripVertical className="w-5 h-5 text-muted-foreground cursor-grab" />
+                  <input
+                    type="text"
+                    value={link.title}
+                    onChange={(e) => {
+                      setLinks(links.map(l => l.id === link.id ? { ...l, title: e.target.value } : l));
+
+                    }}
+                    placeholder="Title"
+                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={link.url}
+                    onChange={(e) => {
+                      setLinks(links.map(l => l.id === link.id ? { ...l, url: e.target.value } : l));
+
+                    }}
+                    placeholder="URL"
+                    className="flex-[2] px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      setLinks(links.filter(l => l.id !== link.id));
+
+                    }}
+                    className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          </GlassCard>
+
+          {/* Wallpaper Settings */}
+          <GlassCard className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
+                <Image className="w-5 h-5 text-primary" />
+                Wallpaper
+              </h2>
+            </div>
+            <div className="space-y-4">
+              <div className="relative h-32 rounded-xl bg-muted overflow-hidden group">
+                {profileData.coverImage ? (
+                  <div
+                    className={`absolute inset-0 bg-cover bg-center ${profileData.isWallpaperBlurred ? 'blur-sm' : ''}`}
+                    style={{ backgroundImage: `url(${profileData.coverImage})` }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20" />
+                )}
+
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {!planFeatures.wallpaper ? (
+                    <NeonButton size="sm" onClick={() => {
+                      setUpgradeReason("Custom Wallpapers are a premium feature.");
+                      setShowUpgradeModal(true);
+                    }}>
+                      <Lock className="w-4 h-4 mr-2" /> Unlock Wallpaper
+                    </NeonButton>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleWallpaperUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <NeonButton variant="outline" size="sm" className="pointer-events-none">Change Wallpaper</NeonButton>
+                    </>
+                  )}
+
+                  {profileData.coverImage && planFeatures.wallpaper && (
+                    <button
+                      onClick={handleRemoveWallpaper}
+                      className="ml-2 p-2 rounded-xl bg-background/80 hover:bg-destructive/90 text-foreground hover:text-white transition-colors z-20"
+                      title="Remove Wallpaper"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               </div>
-            </GlassCard>
 
-            {/* Links */}
-            <GlassCard className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
-                  <LinkIcon className="w-5 h-5 text-primary" />
-                  Links
-                </h2>
-                <NeonButton variant="outline" size="sm" onClick={handleAddLink}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Link
-                </NeonButton>
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
+                <span className="text-sm font-medium text-foreground">Blur Wallpaper</span>
+                <Switch
+                  checked={profileData.isWallpaperBlurred || false}
+                  onCheckedChange={(checked) => {
+                    setProfileData(prev => ({ ...prev, isWallpaperBlurred: checked }));
+
+                  }}
+                />
               </div>
-              <div className="space-y-3">
-                {links.map((link) => (
-                  <motion.div
-                    key={link.id}
-                    className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 group"
-                    layout
-                  >
-                    <GripVertical className="w-5 h-5 text-muted-foreground cursor-grab" />
-                    <input
-                      type="text"
-                      value={link.title}
-                      onChange={(e) => {
-                        setLinks(links.map(l => l.id === link.id ? { ...l, title: e.target.value } : l));
+            </div>
+          </GlassCard>
 
-                      }}
-                      placeholder="Title"
-                      className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={link.url}
-                      onChange={(e) => {
-                        setLinks(links.map(l => l.id === link.id ? { ...l, url: e.target.value } : l));
+          {/* Portfolio Section */}
+          <GlassCard className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-primary" />
+                Portfolio
+              </h2>
+              <NeonButton
+                variant={editingPortfolioId ? "primary" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (!planFeatures.portfolio) {
+                    setUpgradeReason("The Portfolio feature is not included in your current plan.");
+                    setShowUpgradeModal(true);
+                    return;
+                  }
 
-                      }}
-                      placeholder="URL"
-                      className="flex-[2] px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
-                    />
+                  if (portfolioItems.length >= maxPortfolioItems && !editingPortfolioId) {
+                    setUpgradeReason(`You've reached the limit of ${maxPortfolioItems} portfolio items.`);
+                    setShowUpgradeModal(true);
+                    return;
+                  }
+
+                  if (editingPortfolioId && showAddPortfolio) {
+                    setShowAddPortfolio(!showAddPortfolio);
+                    if (showAddPortfolio) cancelEditPortfolio();
+                  } else {
+                    setShowAddPortfolio(true);
+                  }
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {editingPortfolioId && showAddPortfolio ? "Editing Item" : "Add Item"}
+              </NeonButton>
+            </div>
+
+            {/* Lock Warning for Portfolio */}
+            {!planFeatures.portfolio && portfolioItems.length === 0 && (
+              <div className="p-8 text-center border border-white/10 rounded-xl bg-muted/20 flex flex-col items-center gap-2">
+                <Lock className="w-8 h-8 text-muted-foreground" />
+                <h3 className="font-bold">Portfolio Locked</h3>
+                <p className="text-sm text-muted-foreground mb-4">Upgrade your plan to showcase your work.</p>
+                <NeonButton size="sm" onClick={() => {
+                  setUpgradeReason("Upgrade to unlock the Portfolio feature.");
+                  setShowUpgradeModal(true);
+                }}>Unlock Feature</NeonButton>
+              </div>
+            )}
+
+            {/* Add Portfolio Form */}
+            {showAddPortfolio && planFeatures.portfolio && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 p-4 rounded-xl bg-muted/50 border border-border space-y-3"
+              >
+                <input
+                  type="text"
+                  placeholder="Project Title"
+                  value={newPortfolioItem.title}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                />
+                <input
+                  type="text"
+                  placeholder="Description"
+                  value={newPortfolioItem.description}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                />
+
+                {/* Upload Image for Portfolio */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !currentUser) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error("File size must be less than 5MB");
+                        return;
+                      }
+                      const toastId = toast.loading("Uploading portfolio image...");
+                      try {
+                        // Delete previous image if it exists (cleanup)
+                        if (newPortfolioItem.imageUrl) {
+                          await storageService.deleteImage(newPortfolioItem.imageUrl);
+                        }
+
+                        const path = `users/${currentUser.uid}/portfolio_${Date.now()}`;
+                        const url = await storageService.uploadImage(file, path);
+                        setNewPortfolioItem(prev => ({ ...prev, imageUrl: url }));
+                        toast.success("Image uploaded!");
+                      } catch (err: any) {
+                        console.error(err);
+                        setErrorAlert({ isOpen: true, message: "Failed to upload image: " + (err.message || "") });
+                      } finally {
+                        toast.dismiss(toastId);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 transition-colors ${newPortfolioItem.imageUrl ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/50'}`}>
+                    {newPortfolioItem.imageUrl ? (
+                      <div className="flex items-center gap-2">
+                        <Image className="w-4 h-4 text-primary" />
+                        <span className="text-primary font-medium">Image Uploaded</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (newPortfolioItem.imageUrl) {
+                              await storageService.deleteImage(newPortfolioItem.imageUrl);
+                              setNewPortfolioItem(prev => ({ ...prev, imageUrl: "" }));
+                              toast.success("Image removed");
+                            }
+                          }}
+                          className="p-1 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-colors relative z-20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Image className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Upload Image (Optional)</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Category (e.g., Design, Development)"
+                  value={newPortfolioItem.category}
+                  onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                />
+                <div className="flex gap-2">
+                  <NeonButton size="sm" onClick={addPortfolioItem}>
+                    {editingPortfolioId ? "Update Item" : "Add Item"}
+                  </NeonButton>
+                  <NeonButton variant="outline" size="sm" onClick={cancelEditPortfolio}>Cancel</NeonButton>
+                </div>
+              </motion.div>
+            )}
+
+            <div className="space-y-3">
+              {portfolioItems.map((item) => (
+                <motion.div
+                  key={item.id}
+                  className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 group"
+                  layout
+                >
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Briefcase className="w-6 h-6 text-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-foreground truncate">{item.title}</h4>
+                    <p className="text-sm text-muted-foreground truncate">{item.description}</p>
+                    <span className="inline-block text-xs px-2 py-1 rounded-full bg-primary/10 text-primary mt-1">
+                      {item.category}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => {
-                        setLinks(links.filter(l => l.id !== link.id));
-
-                      }}
+                      onClick={() => handleEditPortfolio(item)}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      <span className="sr-only">Edit</span>
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => removePortfolioItem(item.id)}
                       className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                  </motion.div>
-                ))}
-              </div>
-            </GlassCard>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </GlassCard>
 
-            {/* Wallpaper Settings */}
-            <GlassCard className="p-6">
-              <div className="flex items-center justify-between mb-4">
+          {/* Private Content Section */}
+          <GlassCard className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
                 <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
-                  <Image className="w-5 h-5 text-primary" />
-                  Wallpaper
+                  <Lock className="w-5 h-5 text-primary" />
+                  Private Content
                 </h2>
               </div>
-              <div className="space-y-4">
-                <div className="relative h-32 rounded-xl bg-muted overflow-hidden group">
-                  {profileData.coverImage ? (
-                    <div
-                      className={`absolute inset-0 bg-cover bg-center ${profileData.isWallpaperBlurred ? 'blur-sm' : ''}`}
-                      style={{ backgroundImage: `url(${profileData.coverImage})` }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20" />
-                  )}
+              <NeonButton
+                variant={editingPrivateId ? "primary" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (!planFeatures.privateContent) {
+                    setUpgradeReason("Private Content is not included in your current plan.");
+                    setShowUpgradeModal(true);
+                    return;
+                  }
 
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    {!planFeatures.wallpaper ? (
-                      <NeonButton size="sm" onClick={() => {
-                        setUpgradeReason("Custom Wallpapers are a premium feature.");
-                        setShowUpgradeModal(true);
-                      }}>
-                        <Lock className="w-4 h-4 mr-2" /> Unlock Wallpaper
-                      </NeonButton>
+                  if (privateContents.length >= maxPrivateContentItems && !editingPrivateId) {
+                    setUpgradeReason(`You've reached the limit of ${maxPrivateContentItems} private content items.`);
+                    setShowUpgradeModal(true);
+                    return;
+                  }
+
+                  if (!pinEnabled || !pin) {
+                    toast.error("Please enable PIN lock and set a PIN first");
+                    return;
+                  }
+
+                  if (editingPrivateId && showAddPrivate) {
+                    setShowAddPrivate(!showAddPrivate);
+                    if (showAddPrivate) cancelEditPrivate();
+                  } else {
+                    setShowAddPrivate(true);
+                  }
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {editingPrivateId && showAddPrivate ? "Editing Content" : "Add Content"}
+              </NeonButton>
+            </div>
+
+            {/* Lock Warning for Private Content */}
+            {!planFeatures.privateContent && privateContents.length === 0 && (
+              <div className="p-8 text-center border border-white/10 rounded-xl bg-muted/20 flex flex-col items-center gap-2 mb-6">
+                <Lock className="w-8 h-8 text-muted-foreground" />
+                <h3 className="font-bold">Private Mode Locked</h3>
+                <p className="text-sm text-muted-foreground mb-4">Upgrade to share exclusive content behind a PIN.</p>
+                <NeonButton size="sm" onClick={() => {
+                  setUpgradeReason("Upgrade to unlock Private Content features.");
+                  setShowUpgradeModal(true);
+                }}>Unlock Feature</NeonButton>
+              </div>
+            )}
+
+            <p className="text-sm text-muted-foreground mb-4">
+              This content will only be visible to visitors who enter the correct PIN.
+            </p>
+
+            {/* PIN Settings */}
+            <div className="p-4 rounded-xl bg-muted/50 border border-border mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Lock className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-foreground">PIN Lock</p>
+                    <p className="text-sm text-muted-foreground">Require PIN to view private content</p>
+                  </div>
+                </div>
+                <Switch checked={pinEnabled} onCheckedChange={(checked) => {
+                  setPinEnabled(checked);
+
+                }} />
+              </div>
+
+              {pinEnabled && (
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-foreground">Your PIN:</label>
+                  <div className="relative">
+                    <input
+                      type={showPin ? "text" : "password"}
+                      value={pin}
+                      onChange={(e) => handlePinChange(e.target.value)}
+                      maxLength={6}
+                      className="w-32 px-4 py-2 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground text-center tracking-widest"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <span className="text-xs text-muted-foreground">6 digits</span>
+                </div>
+              )}
+            </div>
+
+            {/* Add Private Content Form */}
+            {showAddPrivate && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-4 p-4 rounded-xl bg-muted/50 border border-border space-y-3"
+              >
+                <input
+                  type="text"
+                  placeholder="Title (e.g., Personal Email, Private Phone)"
+                  value={newPrivateContent.title}
+                  onChange={(e) => setNewPrivateContent({ ...newPrivateContent, title: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                />
+                <input
+                  type="text"
+                  placeholder="Content"
+                  value={newPrivateContent.content}
+                  onChange={(e) => setNewPrivateContent({ ...newPrivateContent, content: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                />
+
+                {/* Upload Image for Private Content */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !currentUser) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error("File size must be less than 5MB");
+                        return;
+                      }
+                      const toastId = toast.loading("Uploading private image...");
+                      try {
+                        // Cleanup old image
+                        if (newPrivateContent.imageUrl) {
+                          await storageService.deleteImage(newPrivateContent.imageUrl);
+                        }
+
+                        const path = `users/${currentUser.uid}/private_${Date.now()}`;
+                        const url = await storageService.uploadImage(file, path);
+                        setNewPrivateContent(prev => ({ ...prev, imageUrl: url }));
+                        toast.success("Image uploaded!");
+                      } catch (err: any) {
+                        console.error(err);
+                        setErrorAlert({ isOpen: true, message: "Failed to upload image: " + (err.message || "") });
+                      } finally {
+                        toast.dismiss(toastId);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 transition-colors ${newPrivateContent.imageUrl ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/50'}`}>
+                    {newPrivateContent.imageUrl ? (
+                      <div className="flex items-center gap-2">
+                        <Image className="w-4 h-4 text-primary" />
+                        <span className="text-primary font-medium">Image Uploaded</span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (newPrivateContent.imageUrl) {
+                              await storageService.deleteImage(newPrivateContent.imageUrl);
+                              setNewPrivateContent(prev => ({ ...prev, imageUrl: "" }));
+                              toast.success("Image removed");
+                            }
+                          }}
+                          className="p-1 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-colors relative z-20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     ) : (
                       <>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleWallpaperUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <NeonButton variant="outline" size="sm" className="pointer-events-none">Change Wallpaper</NeonButton>
+                        <Image className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Upload Image (Optional, visible after unlock)</span>
                       </>
                     )}
-
-                    {profileData.coverImage && planFeatures.wallpaper && (
-                      <button
-                        onClick={handleRemoveWallpaper}
-                        className="ml-2 p-2 rounded-xl bg-background/80 hover:bg-destructive/90 text-foreground hover:text-white transition-colors z-20"
-                        title="Remove Wallpaper"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border border-border">
-                  <span className="text-sm font-medium text-foreground">Blur Wallpaper</span>
-                  <Switch
-                    checked={profileData.isWallpaperBlurred || false}
-                    onCheckedChange={(checked) => {
-                      setProfileData(prev => ({ ...prev, isWallpaperBlurred: checked }));
-
-                    }}
-                  />
+                <div className="flex gap-2">
+                  <NeonButton size="sm" onClick={addPrivateContent}>Add</NeonButton>
+                  <NeonButton variant="outline" size="sm" onClick={() => setShowAddPrivate(false)}>Cancel</NeonButton>
                 </div>
-              </div>
-            </GlassCard>
+              </motion.div>
+            )}
 
-            {/* Portfolio Section */}
-            <GlassCard className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-primary" />
-                  Portfolio
-                </h2>
-                <NeonButton
-                  variant={editingPortfolioId ? "primary" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    if (!planFeatures.portfolio) {
-                      setUpgradeReason("The Portfolio feature is not included in your current plan.");
-                      setShowUpgradeModal(true);
-                      return;
-                    }
-
-                    if (portfolioItems.length >= maxPortfolioItems && !editingPortfolioId) {
-                      setUpgradeReason(`You've reached the limit of ${maxPortfolioItems} portfolio items.`);
-                      setShowUpgradeModal(true);
-                      return;
-                    }
-
-                    if (editingPortfolioId && showAddPortfolio) {
-                      setShowAddPortfolio(!showAddPortfolio);
-                      if (showAddPortfolio) cancelEditPortfolio();
-                    } else {
-                      setShowAddPortfolio(true);
-                    }
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  {editingPortfolioId && showAddPortfolio ? "Editing Item" : "Add Item"}
-                </NeonButton>
-              </div>
-
-              {/* Lock Warning for Portfolio */}
-              {!planFeatures.portfolio && portfolioItems.length === 0 && (
-                <div className="p-8 text-center border border-white/10 rounded-xl bg-muted/20 flex flex-col items-center gap-2">
-                  <Lock className="w-8 h-8 text-muted-foreground" />
-                  <h3 className="font-bold">Portfolio Locked</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Upgrade your plan to showcase your work.</p>
-                  <NeonButton size="sm" onClick={() => {
-                    setUpgradeReason("Upgrade to unlock the Portfolio feature.");
-                    setShowUpgradeModal(true);
-                  }}>Unlock Feature</NeonButton>
-                </div>
-              )}
-
-              {/* Add Portfolio Form */}
-              {showAddPortfolio && planFeatures.portfolio && (
+            <div className="space-y-3">
+              {privateContents.map((item) => (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-4 p-4 rounded-xl bg-muted/50 border border-border space-y-3"
+                  key={item.id}
+                  className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 group"
+                  layout
                 >
-                  <input
-                    type="text"
-                    placeholder="Project Title"
-                    value={newPortfolioItem.title}
-                    onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Description"
-                    value={newPortfolioItem.description}
-                    onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                  />
-
-                  {/* Upload Image for Portfolio */}
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file || !currentUser) return;
-                        if (file.size > 5 * 1024 * 1024) {
-                          toast.error("File size must be less than 5MB");
-                          return;
-                        }
-                        const toastId = toast.loading("Uploading portfolio image...");
-                        try {
-                          // Delete previous image if it exists (cleanup)
-                          if (newPortfolioItem.imageUrl) {
-                            await storageService.deleteImage(newPortfolioItem.imageUrl);
-                          }
-
-                          const path = `users/${currentUser.uid}/portfolio_${Date.now()}`;
-                          const url = await storageService.uploadImage(file, path);
-                          setNewPortfolioItem(prev => ({ ...prev, imageUrl: url }));
-                          toast.success("Image uploaded!");
-                        } catch (err: any) {
-                          console.error(err);
-                          setErrorAlert({ isOpen: true, message: "Failed to upload image: " + (err.message || "") });
-                        } finally {
-                          toast.dismiss(toastId);
-                        }
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                    <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 transition-colors ${newPortfolioItem.imageUrl ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/50'}`}>
-                      {newPortfolioItem.imageUrl ? (
-                        <div className="flex items-center gap-2">
-                          <Image className="w-4 h-4 text-primary" />
-                          <span className="text-primary font-medium">Image Uploaded</span>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (newPortfolioItem.imageUrl) {
-                                await storageService.deleteImage(newPortfolioItem.imageUrl);
-                                setNewPortfolioItem(prev => ({ ...prev, imageUrl: "" }));
-                                toast.success("Image removed");
-                              }
-                            }}
-                            className="p-1 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-colors relative z-20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <Image className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Upload Image (Optional)</span>
-                        </>
-                      )}
-                    </div>
+                  <Lock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-foreground">{item.title}</h4>
+                    <p className="text-sm text-muted-foreground truncate">{item.content}</p>
                   </div>
-
-                  <input
-                    type="text"
-                    placeholder="Category (e.g., Design, Development)"
-                    value={newPortfolioItem.category}
-                    onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                  />
                   <div className="flex gap-2">
-                    <NeonButton size="sm" onClick={addPortfolioItem}>
-                      {editingPortfolioId ? "Update Item" : "Add Item"}
-                    </NeonButton>
-                    <NeonButton variant="outline" size="sm" onClick={cancelEditPortfolio}>Cancel</NeonButton>
+                    <button
+                      onClick={() => handleEditPrivate(item)}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      <span className="sr-only">Edit</span>
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => removePrivateContent(item.id)}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </motion.div>
-              )}
-
-              <div className="space-y-3">
-                {portfolioItems.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 group"
-                    layout
-                  >
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <Briefcase className="w-6 h-6 text-primary" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-foreground truncate">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground truncate">{item.description}</p>
-                      <span className="inline-block text-xs px-2 py-1 rounded-full bg-primary/10 text-primary mt-1">
-                        {item.category}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditPortfolio(item)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                      >
-                        <span className="sr-only">Edit</span>
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => removePortfolioItem(item.id)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </GlassCard>
-
-            {/* Private Content Section */}
-            <GlassCard className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
-                    <Lock className="w-5 h-5 text-primary" />
-                    Private Content
-                  </h2>
-                </div>
-                <NeonButton
-                  variant={editingPrivateId ? "primary" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    if (!planFeatures.privateContent) {
-                      setUpgradeReason("Private Content is not included in your current plan.");
-                      setShowUpgradeModal(true);
-                      return;
-                    }
-
-                    if (privateContents.length >= maxPrivateContentItems && !editingPrivateId) {
-                      setUpgradeReason(`You've reached the limit of ${maxPrivateContentItems} private content items.`);
-                      setShowUpgradeModal(true);
-                      return;
-                    }
-
-                    if (!pinEnabled || !pin) {
-                      toast.error("Please enable PIN lock and set a PIN first");
-                      return;
-                    }
-
-                    if (editingPrivateId && showAddPrivate) {
-                      setShowAddPrivate(!showAddPrivate);
-                      if (showAddPrivate) cancelEditPrivate();
-                    } else {
-                      setShowAddPrivate(true);
-                    }
-                  }}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  {editingPrivateId && showAddPrivate ? "Editing Content" : "Add Content"}
-                </NeonButton>
-              </div>
-
-              {/* Lock Warning for Private Content */}
-              {!planFeatures.privateContent && privateContents.length === 0 && (
-                <div className="p-8 text-center border border-white/10 rounded-xl bg-muted/20 flex flex-col items-center gap-2 mb-6">
-                  <Lock className="w-8 h-8 text-muted-foreground" />
-                  <h3 className="font-bold">Private Mode Locked</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Upgrade to share exclusive content behind a PIN.</p>
-                  <NeonButton size="sm" onClick={() => {
-                    setUpgradeReason("Upgrade to unlock Private Content features.");
-                    setShowUpgradeModal(true);
-                  }}>Unlock Feature</NeonButton>
-                </div>
-              )}
-
-              <p className="text-sm text-muted-foreground mb-4">
-                This content will only be visible to visitors who enter the correct PIN.
-              </p>
-
-              {/* PIN Settings */}
-              <div className="p-4 rounded-xl bg-muted/50 border border-border mb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <Lock className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">PIN Lock</p>
-                      <p className="text-sm text-muted-foreground">Require PIN to view private content</p>
-                    </div>
-                  </div>
-                  <Switch checked={pinEnabled} onCheckedChange={(checked) => {
-                    setPinEnabled(checked);
-
-                  }} />
-                </div>
-
-                {pinEnabled && (
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-foreground">Your PIN:</label>
-                    <div className="relative">
-                      <input
-                        type={showPin ? "text" : "password"}
-                        value={pin}
-                        onChange={(e) => handlePinChange(e.target.value)}
-                        maxLength={6}
-                        className="w-32 px-4 py-2 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground text-center tracking-widest"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPin(!showPin)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <span className="text-xs text-muted-foreground">6 digits</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Add Private Content Form */}
-              {showAddPrivate && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-4 p-4 rounded-xl bg-muted/50 border border-border space-y-3"
-                >
-                  <input
-                    type="text"
-                    placeholder="Title (e.g., Personal Email, Private Phone)"
-                    value={newPrivateContent.title}
-                    onChange={(e) => setNewPrivateContent({ ...newPrivateContent, title: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Content"
-                    value={newPrivateContent.content}
-                    onChange={(e) => setNewPrivateContent({ ...newPrivateContent, content: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
-                  />
-
-                  {/* Upload Image for Private Content */}
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file || !currentUser) return;
-                        if (file.size > 5 * 1024 * 1024) {
-                          toast.error("File size must be less than 5MB");
-                          return;
-                        }
-                        const toastId = toast.loading("Uploading private image...");
-                        try {
-                          // Cleanup old image
-                          if (newPrivateContent.imageUrl) {
-                            await storageService.deleteImage(newPrivateContent.imageUrl);
-                          }
-
-                          const path = `users/${currentUser.uid}/private_${Date.now()}`;
-                          const url = await storageService.uploadImage(file, path);
-                          setNewPrivateContent(prev => ({ ...prev, imageUrl: url }));
-                          toast.success("Image uploaded!");
-                        } catch (err: any) {
-                          console.error(err);
-                          setErrorAlert({ isOpen: true, message: "Failed to upload image: " + (err.message || "") });
-                        } finally {
-                          toast.dismiss(toastId);
-                        }
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                    <div className={`w-full px-4 py-3 rounded-xl bg-muted border border-border flex items-center justify-center gap-2 transition-colors ${newPrivateContent.imageUrl ? 'border-primary/50 bg-primary/5' : 'hover:border-primary/50'}`}>
-                      {newPrivateContent.imageUrl ? (
-                        <div className="flex items-center gap-2">
-                          <Image className="w-4 h-4 text-primary" />
-                          <span className="text-primary font-medium">Image Uploaded</span>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (newPrivateContent.imageUrl) {
-                                await storageService.deleteImage(newPrivateContent.imageUrl);
-                                setNewPrivateContent(prev => ({ ...prev, imageUrl: "" }));
-                                toast.success("Image removed");
-                              }
-                            }}
-                            className="p-1 hover:bg-destructive/10 rounded-full text-muted-foreground hover:text-destructive transition-colors relative z-20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <Image className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Upload Image (Optional, visible after unlock)</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <NeonButton size="sm" onClick={addPrivateContent}>Add</NeonButton>
-                    <NeonButton variant="outline" size="sm" onClick={() => setShowAddPrivate(false)}>Cancel</NeonButton>
-                  </div>
-                </motion.div>
-              )}
-
-              <div className="space-y-3">
-                {privateContents.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 group"
-                    layout
-                  >
-                    <Lock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-foreground">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground truncate">{item.content}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditPrivate(item)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                      >
-                        <span className="sr-only">Edit</span>
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => removePrivateContent(item.id)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Sidebar / Preview / Extra Actions could go here if needed, or just clear empty space in lg layout */}
-          <div className="space-y-6">
-            {/* We can put preview button or tips here */}
-            <GlassCard className="p-6 sticky top-24">
-              <h3 className="text-lg font-bold font-display text-foreground mb-4">Tips</h3>
-              <ul className="space-y-3 text-sm text-muted-foreground">
-                <li className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                  <span>Upload a high-quality profile picture for the best impression.</span>
-                </li>
-                <li className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                  <span>Add a blurred wallpaper to make your text pop.</span>
-                </li>
-                <li className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                  <span>Use the Private Content section for sensitive info like personal phone numbers.</span>
-                </li>
-                <li className="flex gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                  <span>Keep your PIN secure and share it only with trusted contacts.</span>
-                </li>
-              </ul>
-            </GlassCard>
-          </div>
+              ))}
+            </div>
+          </GlassCard>
         </div>
 
-        <ErrorAlert
-          isOpen={errorAlert.isOpen}
-          onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
-          message={errorAlert.message}
-        />
-      </div >
-    </div >
+        {/* Sidebar / Preview / Extra Actions could go here if needed, or just clear empty space in lg layout */}
+        <div className="space-y-6">
+          {/* We can put preview button or tips here */}
+          <GlassCard className="p-6 sticky top-24">
+            <h3 className="text-lg font-bold font-display text-foreground mb-4">Tips</h3>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li className="flex gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                <span>Upload a high-quality profile picture for the best impression.</span>
+              </li>
+              <li className="flex gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                <span>Add a blurred wallpaper to make your text pop.</span>
+              </li>
+              <li className="flex gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                <span>Use the Private Content section for sensitive info like personal phone numbers.</span>
+              </li>
+              <li className="flex gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                <span>Keep your PIN secure and share it only with trusted contacts.</span>
+              </li>
+            </ul>
+          </GlassCard>
+        </div>
+      </div>
+
+      <ErrorAlert
+        isOpen={errorAlert.isOpen}
+        onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
+        message={errorAlert.message}
+      />
+
+      <FloatingSaveBar
+        isOpen={hasUnsavedChanges}
+        onSave={handleSave}
+        loading={loading}
+      />
+    </div>
   );
 };
 

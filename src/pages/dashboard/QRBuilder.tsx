@@ -233,7 +233,7 @@ const QRBuilder = () => {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Customization */}
         <div className="space-y-6">
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 lg:p-6">
             <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
               <Palette className="w-5 h-5 text-primary" />
               Color
@@ -243,7 +243,7 @@ const QRBuilder = () => {
                 <button
                   key={color}
                   onClick={() => setSelectedColor(color)}
-                  className={`w-12 h-12 rounded-xl transition-all ${selectedColor === color ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+                  className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl transition-all ${selectedColor === color ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
                     }`}
                   style={{ backgroundColor: color }}
                 />
@@ -251,7 +251,7 @@ const QRBuilder = () => {
             </div>
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 lg:p-6">
             <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
               <Settings className="w-5 h-5 text-primary" />
               Style
@@ -261,7 +261,7 @@ const QRBuilder = () => {
                 <button
                   key={style}
                   onClick={() => setQrStyle(style)}
-                  className={`p-4 rounded-xl border-2 transition-all capitalize ${qrStyle === style
+                  className={`p-3 lg:p-4 rounded-xl border-2 transition-all capitalize text-sm lg:text-base ${qrStyle === style
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-border text-muted-foreground hover:border-primary/50"
                     }`}
@@ -272,9 +272,9 @@ const QRBuilder = () => {
             </div>
           </GlassCard>
 
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 lg:p-6">
             <h2 className="text-xl font-bold font-display text-foreground mb-6">Download Options</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <NeonButton variant="outline" className="w-full" onClick={() => handleDownload('png')}>
                 <Download className="w-4 h-4 mr-2" />
                 PNG
@@ -287,7 +287,7 @@ const QRBuilder = () => {
           </GlassCard>
 
           {/* Saved Designs */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 lg:p-6">
             <h2 className="text-xl font-bold font-display text-foreground mb-6">Saved Designs</h2>
             <div className="space-y-3">
               {savedDesigns.length === 0 && (
@@ -299,17 +299,17 @@ const QRBuilder = () => {
                   onClick={() => loadDesign(design)}
                   className={`flex items-center justify-between p-3 rounded-xl transition-colors cursor-pointer group hover:bg-muted ${editingId === design.id ? "bg-primary/10 border border-primary/20" : "bg-muted/50"}`}
                 >
-                  <span className="font-medium text-foreground">{design.name}</span>
+                  <span className="font-medium text-foreground truncate max-w-[150px] sm:max-w-none">{design.name}</span>
                   <div className="flex gap-2">
                     <button
                       onClick={(e) => { e.stopPropagation(); loadDesign(design); }}
-                      className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors opacity-100 lg:opacity-0 group-hover:opacity-100 focus:opacity-100"
                     >
                       <Settings className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(design.id); }}
-                      className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors opacity-100 lg:opacity-0 group-hover:opacity-100 focus:opacity-100"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -321,11 +321,11 @@ const QRBuilder = () => {
         </div>
 
         {/* Preview */}
-        <div>
-          <GlassCard className="p-8">
+        <div className="w-full overflow-hidden">
+          <GlassCard className="p-4 lg:p-8">
             <h2 className="text-xl font-bold font-display text-foreground mb-6 text-center">Preview</h2>
             <motion.div
-              className="aspect-square rounded-2xl bg-white p-8 flex items-center justify-center mx-auto max-w-sm"
+              className="aspect-square rounded-2xl bg-white p-4 lg:p-8 flex items-center justify-center mx-auto w-full max-w-[280px] sm:max-w-sm"
               animate={{ scale: [1, 1.02, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -334,7 +334,7 @@ const QRBuilder = () => {
                 <canvas ref={canvasRef} className="w-full h-full object-contain" />
               </div>
             </motion.div>
-            <p className="text-center text-muted-foreground mt-4 text-sm break-all">
+            <p className="text-center text-muted-foreground mt-4 text-xs sm:text-sm break-all px-2">
               {currentUser ? `${window.location.origin}/u/${currentUser.uid}` : "nxcbadge.com/u/username"}
             </p>
             <div className="mt-6 space-y-4">
@@ -342,17 +342,17 @@ const QRBuilder = () => {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   {editingId ? "Edit Design" : "Save New Design"}
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Design Name"
-                    className="flex-1 px-4 py-2 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
+                    className="w-full px-4 py-2 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none text-foreground"
                   />
-                  <div className="flex gap-2">
-                    <NeonButton onClick={handleSave} disabled={loading} className="flex-1">
-                      {loading ? <Loader2 className="animate-spin w-4 h-4" /> : (editingId ? "Update Design" : "Save Design")}
+                  <div className="flex gap-2 mt-2 sm:mt-0">
+                    <NeonButton onClick={handleSave} disabled={loading} className="flex-1 sm:flex-none">
+                      {loading ? <Loader2 className="animate-spin w-4 h-4" /> : (editingId ? "Update" : "Save")}
                     </NeonButton>
                     {editingId && (
                       <NeonButton onClick={handleCancelEdit} variant="outline" className="px-3">

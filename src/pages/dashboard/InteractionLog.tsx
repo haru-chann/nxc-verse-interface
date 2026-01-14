@@ -183,7 +183,7 @@ const InteractionLog = () => {
           </h1>
           <p className="text-muted-foreground mt-1">Track all profile interactions and engagement</p>
         </div>
-        <NeonButton onClick={exportToCSV}>
+        <NeonButton onClick={exportToCSV} className="w-full sm:w-auto text-sm" size="sm">
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </NeonButton>

@@ -50,7 +50,7 @@ export const Footer = () => {
                 <img src="/nxcverse.svg" alt="NXC Badge Verse Logo" className="w-full h-full object-contain" />
               </motion.div>
               <span className="font-display text-xl font-bold text-foreground">
-                NXC <span className="text-primary">Badge Verse</span>
+                NXC Badge <span className="text-primary">Verse</span>
               </span>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-sm">

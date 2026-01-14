@@ -12,16 +12,17 @@ import {
   Mail,
   Lock,
   Bell,
-  Shield,
   Trash2,
+  Shield,
   Eye,
   EyeOff,
-  Save,
   Camera,
   Code,
   Crown,
   Check
 } from "lucide-react";
+import { FloatingSaveBar } from "@/components/ui/FloatingSaveBar";
+
 import { useSubscriptionLimits } from "@/hooks/useSubscriptionLimits";
 import { updatePassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, updateProfile } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
@@ -59,6 +60,13 @@ const Settings = () => {
     profileViewAlerts: true,
   });
 
+  const [initialFormData, setInitialFormData] = useState<any>(null);
+  const [initialNotifications, setInitialNotifications] = useState<any>(null);
+
+  const isProfileDirty = initialFormData && JSON.stringify(formData) !== JSON.stringify(initialFormData);
+  const isNotificationsDirty = initialNotifications && JSON.stringify(notifications) !== JSON.stringify(initialNotifications);
+
+
   const limits = useSubscriptionLimits();
 
   // Load user data
@@ -75,14 +83,25 @@ const Settings = () => {
         }
 
         if (data) {
-          setFormData(prev => ({
-            ...prev,
+          const loadedData = {
+            ...formData, // Keep password fields empty
             firstName: data.firstName || "",
             lastName: data.lastName || "",
             email: currentUser.email || "",
             phone: (data as any).phone || "",
-          }));
+          };
+          setFormData(loadedData);
+          setInitialFormData(loadedData);
         }
+
+        if (settingsDoc.exists()) {
+          const notifData = { ...notifications, ...settingsDoc.data() };
+          setNotifications(notifData);
+          setInitialNotifications(notifData);
+        } else {
+          setInitialNotifications(notifications);
+        }
+
       } catch (error) {
         console.error(error);
         setErrorAlert({ isOpen: true, message: "Failed to load profile data. Please refresh the page." });
@@ -113,6 +132,8 @@ const Settings = () => {
         title: "Profile Updated",
         description: "Your profile information has been saved successfully.",
       });
+      setInitialFormData(formData); // Reset dirty state
+
     } catch (error: any) {
       console.error(error);
       setErrorAlert({ isOpen: true, message: getFriendlyErrorMessage(error) });
@@ -163,6 +184,8 @@ const Settings = () => {
         title: "Notifications Updated",
         description: "Your notification preferences have been saved.",
       });
+      setInitialNotifications(notifications); // Reset dirty state
+
     } catch (error) {
       console.error(error);
       toast({
@@ -467,10 +490,7 @@ const Settings = () => {
             </div>
           </div>
 
-          <NeonButton onClick={handleSaveProfile}>
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </NeonButton>
+
         </GlassCard>
       </motion.div>
 
@@ -591,10 +611,7 @@ const Settings = () => {
             ))}
           </div>
 
-          <NeonButton onClick={handleSaveNotifications}>
-            <Save className="w-4 h-4 mr-2" />
-            Save Preferences
-          </NeonButton>
+
         </GlassCard>
       </motion.div>
 
@@ -646,6 +663,16 @@ const Settings = () => {
         isOpen={errorAlert.isOpen}
         onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
         message={errorAlert.message}
+      />
+
+      <FloatingSaveBar
+        isOpen={isProfileDirty || isNotificationsDirty}
+        onSave={() => {
+          if (isProfileDirty) handleSaveProfile();
+          if (isNotificationsDirty) handleSaveNotifications();
+        }}
+        loading={false}
+        label="Save Changes"
       />
     </div >
   );

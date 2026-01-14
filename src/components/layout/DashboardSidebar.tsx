@@ -58,7 +58,7 @@ export const DashboardSidebar = ({ collapsed, onToggle, mobileOpen, onMobileClos
           </div>
           {(!collapsed || mobileOpen) && (
             <span className="font-display text-lg font-bold text-sidebar-foreground">
-              NXC Badge Verse
+              NXC Badge <span className="text-primary">Verse</span>
             </span>
           )}
         </Link>
@@ -71,7 +71,7 @@ export const DashboardSidebar = ({ collapsed, onToggle, mobileOpen, onMobileClos
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-6 px-3 overflow-y-auto custom-scrollbar">
+      < nav className="flex-1 py-6 px-3 overflow-y-auto custom-scrollbar" >
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -125,7 +125,7 @@ export const DashboardSidebar = ({ collapsed, onToggle, mobileOpen, onMobileClos
             </li>
           )}
         </ul>
-      </nav>
+      </nav >
     </>
   );
 

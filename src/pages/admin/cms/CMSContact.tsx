@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { FloatingSaveBar } from "@/components/ui/FloatingSaveBar";
 
 const defaultContact = {
     email: "nxcbadge@gmail.com",
@@ -14,8 +15,11 @@ const defaultContact = {
 
 export const CMSContact = () => {
     const [content, setContent] = useState<any>(defaultContact);
+    const [initialContent, setInitialContent] = useState<any>(defaultContact);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    const isDirty = JSON.stringify(content) !== JSON.stringify(initialContent);
 
     useEffect(() => {
         fetchContent();
@@ -28,6 +32,7 @@ export const CMSContact = () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 setContent(docSnap.data());
+                setInitialContent(docSnap.data());
             }
         } catch (error) {
             console.error(error);
@@ -42,6 +47,7 @@ export const CMSContact = () => {
         try {
             await setDoc(doc(db, "site_content", "contact"), content, { merge: true });
             toast.success("Contact info updated!");
+            setInitialContent(content);
         } catch (error) {
             console.error(error);
             toast.error("Failed to save changes");
@@ -60,10 +66,6 @@ export const CMSContact = () => {
         <div className="space-y-8">
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold font-display">Manage Contact Info</h2>
-                <NeonButton onClick={handleSave} disabled={saving}>
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Changes
-                </NeonButton>
             </div>
 
             <GlassCard className="p-6 max-w-2xl space-y-6">
@@ -96,6 +98,12 @@ export const CMSContact = () => {
                     />
                 </div>
             </GlassCard>
+
+            <FloatingSaveBar
+                isOpen={isDirty}
+                onSave={handleSave}
+                loading={saving}
+            />
         </div>
     );
 };

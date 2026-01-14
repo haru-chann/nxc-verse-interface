@@ -145,7 +145,9 @@ export const DashboardLayout = () => {
                 >
                   <Menu className="w-6 h-6" />
                 </button>
-                <span className="font-display font-bold text-lg tracking-tight">NXC Badge Verse</span>
+                <span className="font-display font-bold text-lg tracking-tight">
+                  NXC Badge <span className="text-primary">Verse</span>
+                </span>
               </div>
 
               {/* Search Removed */}

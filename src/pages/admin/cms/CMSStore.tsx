@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Save, GripVertical } from "lucide-react";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { FloatingSaveBar } from "@/components/ui/FloatingSaveBar";
 import { planService } from "@/services/planService";
 
 interface Product {
@@ -68,8 +69,11 @@ const defaultProducts: Product[] = [
 
 export const CMSStore = () => {
     const [products, setProducts] = useState<Product[]>([]);
+    const [initialProducts, setInitialProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    const isDirty = JSON.stringify(products) !== JSON.stringify(initialProducts);
 
     useEffect(() => {
         fetchProducts();
@@ -82,8 +86,10 @@ export const CMSStore = () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().products) {
                 setProducts(docSnap.data().products);
+                setInitialProducts(docSnap.data().products);
             } else {
                 setProducts(defaultProducts); // Fallback
+                setInitialProducts(defaultProducts);
             }
         } catch (error) {
             console.error(error);
@@ -99,11 +105,10 @@ export const CMSStore = () => {
             await setDoc(doc(db, "site_content", "store"), { products }, { merge: true });
 
             // Sync with Plan System
-            // We import planService dynamically or just use the imported one if available
-            // Assuming planService is imported. If not, I'll add the import in the next step.
             await planService.syncFromCMS(products);
 
             toast.success("Store content updated & Plans synced!");
+            setInitialProducts(products);
         } catch (error) {
             console.error(error);
             toast.error("Failed to save changes");
@@ -172,10 +177,6 @@ export const CMSStore = () => {
                     <NeonButton onClick={addProduct} variant="outline" className="gap-2">
                         <Plus className="w-4 h-4" />
                         Add New Plan
-                    </NeonButton>
-                    <NeonButton onClick={handleSave} disabled={saving}>
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                        Save Changes
                     </NeonButton>
                 </div>
             </div>
@@ -278,6 +279,11 @@ export const CMSStore = () => {
                     </NeonButton>
                 </div>
             )}
+            <FloatingSaveBar
+                isOpen={isDirty}
+                onSave={handleSave}
+                loading={saving}
+            />
         </div>
     );
 };

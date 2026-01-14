@@ -734,8 +734,9 @@ const PublicProfile = () => {
           <div className="text-center mt-12">
             <p className="text-sm text-muted-foreground">
               Powered by{" "}
-              <a href="/" className="text-primary hover:underline">
-                NXC Badge Verse
+              <a href="/" className="text-foreground hover:no-underline">
+                <span className="hover:underline">NXC Badge </span>
+                <span className="text-primary font-bold hover:underline">Verse</span>
               </a>
             </p>
           </div>
@@ -818,7 +819,7 @@ const PublicProfile = () => {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-3 sm:gap-0">
             <NeonButton variant="outline" onClick={() => setIsReportOpen(false)}>
               Cancel
             </NeonButton>

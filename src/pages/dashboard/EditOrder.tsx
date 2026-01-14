@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { FloatingSaveBar } from "@/components/ui/FloatingSaveBar";
 import { ArrowLeft, Upload, Check, AlertTriangle, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
@@ -21,6 +22,8 @@ export const EditOrder = () => {
     const [order, setOrder] = useState<any>(null);
     const [fields, setFields] = useState<any[]>([]);
     const [formData, setFormData] = useState<Record<string, any>>({});
+    const [initialFormData, setInitialFormData] = useState<Record<string, any>>({});
+    const isDirty = JSON.stringify(formData) !== JSON.stringify(initialFormData);
     const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
@@ -59,6 +62,7 @@ export const EditOrder = () => {
 
             setOrder({ id: orderSnap.id, ...orderData });
             setFormData(orderData.customization || {});
+            setInitialFormData(orderData.customization || {});
 
             // 2. Fetch Form Definition (using strict name slug logic)
             // The planId stored in order should match the strict slug logic now (e.g. "ultra_premium")
@@ -145,6 +149,7 @@ export const EditOrder = () => {
                 formSnapshot: fields // Update snapshot in case fields changed (optional but good)
             });
             toast.success("Order details updated successfully");
+            setInitialFormData(formData); // Reset dirty state
             navigate('/dashboard/my-cards');
         } catch (error) {
             console.error(error);
@@ -291,11 +296,14 @@ export const EditOrder = () => {
                     >
                         Cancel
                     </button>
-                    <NeonButton onClick={handleSave} className="flex-1" disabled={saving}>
-                        {saving ? "Saving..." : "Save Changes"}
-                    </NeonButton>
                 </div>
             </GlassCard>
+
+            <FloatingSaveBar
+                isOpen={isDirty}
+                onSave={handleSave}
+                loading={saving}
+            />
         </div>
     );
 };

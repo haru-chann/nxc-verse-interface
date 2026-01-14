@@ -175,20 +175,20 @@ const ContactsManager = () => {
           </h1>
           <p className="text-muted-foreground mt-1">Manage leads and contacts saved from your profile</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           {selectedIds.size > 0 && (
             <>
-              <NeonButton variant="outline" onClick={exportSelected}>
+              <NeonButton variant="outline" onClick={exportSelected} size="sm">
                 <Download className="w-4 h-4 mr-2" />
-                Export Selected ({selectedIds.size})
+                Export ({selectedIds.size})
               </NeonButton>
-              <NeonButton variant="outline" onClick={deleteSelected} className="text-destructive border-destructive hover:bg-destructive/10">
+              <NeonButton variant="outline" onClick={deleteSelected} className="text-destructive border-destructive hover:bg-destructive/10" size="sm">
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </NeonButton>
             </>
           )}
-          <NeonButton onClick={exportAll}>
+          <NeonButton onClick={exportAll} size="sm" className="w-full sm:w-auto">
             <Download className="w-4 h-4 mr-2" />
             Export All CSV
           </NeonButton>

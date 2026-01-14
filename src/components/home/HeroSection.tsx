@@ -116,7 +116,9 @@ export const HeroSection = () => {
                 {/* Card Content */}
                 <div className="relative z-10 h-full flex flex-col justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground tracking-widest mb-1">NXC BADGE VERSE</p>
+                    <p className="text-xs text-muted-foreground tracking-widest mb-1">
+                      NXC BADGE <span className="text-primary">VERSE</span>
+                    </p>
                     <h3 className="text-xl font-bold text-foreground font-display">John Doe</h3>
                     <p className="text-sm text-muted-foreground">Product Designer</p>
                   </div>
