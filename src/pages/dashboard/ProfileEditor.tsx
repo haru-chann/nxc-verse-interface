@@ -545,7 +545,7 @@ const ProfileEditor = () => {
         {/* Main Editor */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Info */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
               <User className="w-5 h-5 text-primary" />
               Basic Information
@@ -704,7 +704,7 @@ const ProfileEditor = () => {
           </GlassCard>
 
           {/* Contact & Company Info */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <h2 className="text-xl font-bold font-display text-foreground mb-6 flex items-center gap-2">
               <Building className="w-5 h-5 text-primary" />
               Contact & Company
@@ -768,9 +768,9 @@ const ProfileEditor = () => {
               </div>
 
               {/* Public Profile Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-muted/50 border border-border gap-4">
                 <div className="flex items-center gap-3">
-                  <Globe className="w-5 h-5 text-primary" />
+                  <Globe className="w-5 h-5 text-primary flex-shrink-0" />
                   <div>
                     <p className="font-medium text-foreground">Public Profile</p>
                     <p className="text-sm text-muted-foreground">Allow anyone to view your profile and include phone in exports</p>
@@ -785,7 +785,7 @@ const ProfileEditor = () => {
           </GlassCard>
 
           {/* Links */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
                 <LinkIcon className="w-5 h-5 text-primary" />
@@ -800,10 +800,22 @@ const ProfileEditor = () => {
               {links.map((link) => (
                 <motion.div
                   key={link.id}
-                  className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 group"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-muted/50 group"
                   layout
                 >
-                  <GripVertical className="w-5 h-5 text-muted-foreground cursor-grab" />
+                  <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                    <GripVertical className="w-5 h-5 text-muted-foreground cursor-grab" />
+                    {/* Mobile Delete Button (visible only on mobile) */}
+                    <button
+                      onClick={() => {
+                        setLinks(links.filter(l => l.id !== link.id));
+                      }}
+                      className="sm:hidden p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
                   <input
                     type="text"
                     value={link.title}
@@ -812,7 +824,7 @@ const ProfileEditor = () => {
 
                     }}
                     placeholder="Title"
-                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
+                    className="w-full sm:flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
                   />
                   <input
                     type="text"
@@ -822,14 +834,15 @@ const ProfileEditor = () => {
 
                     }}
                     placeholder="URL"
-                    className="flex-[2] px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
+                    className="w-full sm:flex-[2] px-3 py-2 rounded-lg bg-muted border border-border text-foreground text-sm"
                   />
+                  {/* Desktop Delete Button */}
                   <button
                     onClick={() => {
                       setLinks(links.filter(l => l.id !== link.id));
 
                     }}
-                    className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    className="hidden sm:block p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -839,7 +852,7 @@ const ProfileEditor = () => {
           </GlassCard>
 
           {/* Wallpaper Settings */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
                 <Image className="w-5 h-5 text-primary" />
@@ -903,7 +916,7 @@ const ProfileEditor = () => {
           </GlassCard>
 
           {/* Portfolio Section */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-primary" />
@@ -1092,7 +1105,7 @@ const ProfileEditor = () => {
           </GlassCard>
 
           {/* Private Content Section */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold font-display text-foreground flex items-center gap-2">
