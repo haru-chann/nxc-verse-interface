@@ -22,16 +22,22 @@ service cloud.firestore {
       // Update:  User can edit own profile (EXCEPT sensitive role fields)
       //          Super Admin can edit everything (including roles)
       // Update: Permissions for Users, Admins, and Super Admins
-      allow update: if request.auth != null && (
-        // 1. User editing own profile (Restricted: Cannot change role/admin/ban status)
-        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'admin', 'super_admin', 'isBanned'])) ||
+      // Update: Permissions for Users, Admins, Super Admins, AND Public Analytics
+      allow update: if 
+        // 1. Analytics: Allow ANYONE (including public) to update ONLY 'stats' (for views/taps)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats'])) ||
         
-        // 2. Super Admin (Unrestricted)
-        isSuperAdmin() ||
-        
-        // 3. Admin (Restricted: Can only update standard 'user' accounts, cannot change roles)
-        (isAdmin() && (resource.data.role == 'user' || resource.data.role == null) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'admin', 'super_admin']))
-      );
+        // 2. Authenticated Management Rules
+        (request.auth != null && (
+          // A. User editing own profile (Restricted: Cannot change role/admin/ban status)
+          (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'admin', 'super_admin', 'isBanned'])) ||
+          
+          // B. Super Admin (Unrestricted)
+          isSuperAdmin() ||
+          
+          // C. Admin (Restricted: Can only update standard 'user' accounts, cannot change roles)
+          (isAdmin() && (resource.data.role == 'user' || resource.data.role == null) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'admin', 'super_admin']))
+        ));
       
       // Delete: Only user (or maybe super admin?)
       allow delete: if request.auth != null && request.auth.uid == userId;
@@ -128,6 +134,24 @@ service cloud.firestore {
     // --- 8. ADMIN ACTIONS (Logging) ---
     match /admin_actions/{actionId} {
       allow read, write: if isAdmin();
+    }
+
+    // --- 9. USERNAMES (Public Profile Resolution) ---
+    match /usernames/{username} {
+      allow read: if true;
+      allow write: if request.auth != null && (
+        isAdmin() || 
+        (
+          // Non-Admins:
+          // 1. Length Check: Must be >= 5 chars (Only for Creation/Update)
+          (request.method == 'delete' || username.size() >= 5) &&
+          
+          // 2. Ownership Check:
+          // - If Creating/Updating: The 'uid' field must match their Auth UID
+          // - If Deleting: The existing doc's 'uid' must match their Auth UID
+          (request.method == 'delete' ? resource.data.uid == request.auth.uid : request.resource.data.uid == request.auth.uid)
+        )
+      );
     }
   }
 }

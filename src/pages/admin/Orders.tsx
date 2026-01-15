@@ -1,3 +1,4 @@
+import { userService } from "@/services/userService";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,6 +50,7 @@ const AdminOrders = () => {
     const [loading, setLoading] = useState(true);
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [userDetailsCache, setUserDetailsCache] = useState<Record<string, any>>({});
 
     // Pagination State
     const [lastDocs, setLastDocs] = useState<DocumentSnapshot[]>([]);
@@ -98,12 +100,18 @@ const AdminOrders = () => {
                 limit(ORDERS_PER_PAGE)
             ];
 
-            // Apply Filters (Shared Logic)
+            // Apply Filters
             const filterConstraints: any[] = [];
+            const PAID_STATUSES = ["order_received", "processing", "shipped", "delivered"];
+
             if (showPendingOnly) {
+                // "Pending" in UI context means "Pending Fulfillment" (Paid but not delivered)
                 filterConstraints.push(where("status", "in", ["order_received", "processing", "shipped"]));
             } else if (statusFilter !== 'all') {
                 filterConstraints.push(where("status", "==", statusFilter));
+            } else {
+                // Default "All" view now only shows PAID orders
+                filterConstraints.push(where("status", "in", PAID_STATUSES));
             }
 
             // Combine constraints
@@ -125,8 +133,37 @@ const AdminOrders = () => {
                 }
             }
 
-            const q = query(ordersRef, ...constraints);
-            const querySnapshot = await getDocs(q);
+            let querySnapshot;
+
+            try {
+                const q = query(ordersRef, ...constraints);
+                querySnapshot = await getDocs(q);
+            } catch (indexError: any) {
+                // FALLBACK: If index is missing, fetch WITHOUT status filters
+                if (indexError?.message?.includes("index")) {
+                    console.warn("Index missing, falling back to simple query.");
+                    toast.error("Missing Index: Filters disabled. Showing all orders.", { duration: 5000 });
+
+                    // Simple query: Date sort only (Standard index usually exists)
+                    // We must still respect pagination if possible, but let's reset to basics for safety
+                    const fallbackConstraints = [
+                        orderBy("createdAt", "desc"),
+                        limit(ORDERS_PER_PAGE)
+                    ];
+
+                    // Try to keep pagination cursor if it exists
+                    if (direction === 'next' && lastDocs[pageIndex - 2]) {
+                        fallbackConstraints.push(startAfter(lastDocs[pageIndex - 2]));
+                    } else if (direction === 'prev' && pageIndex > 1 && lastDocs[pageIndex - 2]) {
+                        fallbackConstraints.push(startAfter(lastDocs[pageIndex - 2]));
+                    }
+
+                    const fallbackQ = query(ordersRef, ...fallbackConstraints);
+                    querySnapshot = await getDocs(fallbackQ);
+                } else {
+                    throw indexError; // Re-throw other errors
+                }
+            }
 
             const fetchedOrders: Order[] = [];
             querySnapshot.forEach((doc) => {
@@ -144,8 +181,6 @@ const AdminOrders = () => {
                         setLastDocs([lastVisible]);
                     } else {
                         // Store cursor for current page end
-                        // If we are on Page 1, lastVisible is end of Page 1. Used for Page 2.
-                        // lastDocs[0] = end of Page 1.
                         newLastDocs[pageIndex - 1] = lastVisible;
                         setLastDocs(newLastDocs);
                     }
@@ -156,9 +191,10 @@ const AdminOrders = () => {
             }
 
             setOrders(fetchedOrders);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error fetching orders:", error);
-            toast.error("Failed to fetch orders");
+            // Log full error to help debug
+            toast.error("Failed to fetch: " + (error?.message || "Unknown Error"));
         } finally {
             setLoading(false);
         }
@@ -174,10 +210,15 @@ const AdminOrders = () => {
             try {
                 const ordersRef = collection(db, "orders");
                 const constraints: any[] = [];
+                const PAID_STATUSES = ["order_received", "processing", "shipped", "delivered"];
+
                 if (showPendingOnly) {
                     constraints.push(where("status", "in", ["order_received", "processing", "shipped"]));
                 } else if (statusFilter !== 'all') {
                     constraints.push(where("status", "==", statusFilter));
+                } else {
+                    // Default count also respects Paid Only
+                    constraints.push(where("status", "in", PAID_STATUSES));
                 }
                 const countQuery = query(ordersRef, ...constraints);
                 const snapshot = await getCountFromServer(countQuery);
@@ -248,8 +289,22 @@ const AdminOrders = () => {
         }
     };
 
-    const toggleExpand = (orderId: string) => {
+    const toggleExpand = async (orderId: string) => {
         setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
+
+        if (expandedOrderId !== orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (order && !userDetailsCache[order.userId]) {
+                try {
+                    const userProfile = await userService.getUserProfile(order.userId);
+                    if (userProfile) {
+                        setUserDetailsCache(prev => ({ ...prev, [order.userId]: userProfile }));
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch user details for order", orderId, error);
+                }
+            }
+        }
     };
 
     if (loading) {
@@ -503,6 +558,94 @@ const AdminOrders = () => {
                                                 </h4>
 
                                                 <div className="p-4 rounded-lg bg-white/5 space-y-4">
+
+                                                    {/* User Links Section */}
+                                                    {userDetailsCache[order.userId] && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {/* NFC Tap Link (Primary) */}
+                                                            <div className="p-3 bg-black/40 rounded border border-white/10 relative overflow-hidden group">
+                                                                <div className="flex justify-between items-center mb-1">
+                                                                    <p className="text-xs text-primary font-bold uppercase tracking-wider">Tap Link (Write to Card)</p>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const nfcId = userDetailsCache[order.userId].nfcId;
+                                                                            if (nfcId) {
+                                                                                const link = `${window.location.origin}/t/${nfcId}`;
+                                                                                navigator.clipboard.writeText(link);
+                                                                                toast.success("Copied NFC Link");
+                                                                            }
+                                                                        }}
+                                                                        disabled={!userDetailsCache[order.userId].nfcId}
+                                                                        className="text-xs text-primary hover:underline disabled:opacity-50"
+                                                                    >
+                                                                        Copy
+                                                                    </button>
+                                                                </div>
+
+                                                                {userDetailsCache[order.userId].nfcId ? (
+                                                                    <>
+                                                                        <p className="text-sm font-mono truncate text-yellow-500 font-bold">
+                                                                            {`${window.location.origin}/t/${userDetailsCache[order.userId].nfcId}`}
+                                                                        </p>
+                                                                        <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className="text-destructive text-xs">Missing NFC ID</span>
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation();
+                                                                                try {
+                                                                                    toast.loading("Generating NFC ID...");
+                                                                                    const newId = await userService.ensureNfcId(order.userId);
+                                                                                    setUserDetailsCache(prev => ({
+                                                                                        ...prev,
+                                                                                        [order.userId]: { ...prev[order.userId], nfcId: newId }
+                                                                                    }));
+                                                                                    toast.dismiss();
+                                                                                    toast.success("NFC ID Generated!");
+                                                                                } catch (err) {
+                                                                                    toast.dismiss();
+                                                                                    toast.error("Failed to generate ID");
+                                                                                }
+                                                                            }}
+                                                                            className="px-2 py-0.5 bg-primary/20 hover:bg-primary/30 text-primary text-xs rounded border border-primary/20 transition-colors"
+                                                                        >
+                                                                            Generate Now
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Profile Link (Secondary) */}
+                                                            <div className="p-3 bg-black/40 rounded border border-white/10 opacity-70 hover:opacity-100 transition-opacity">
+                                                                <div className="flex justify-between items-center mb-1">
+                                                                    <p className="text-xs text-muted-foreground">Public Profile</p>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const link = userDetailsCache[order.userId].username
+                                                                                ? `${window.location.origin}/@${userDetailsCache[order.userId].username}`
+                                                                                : `${window.location.origin}/u/${order.userId}`;
+                                                                            navigator.clipboard.writeText(link);
+                                                                            toast.success("Copied Profile Link");
+                                                                        }}
+                                                                        className="text-xs text-muted-foreground hover:text-white"
+                                                                    >
+                                                                        Copy
+                                                                    </button>
+                                                                </div>
+                                                                <p className="text-sm font-mono truncate text-muted-foreground">
+                                                                    {userDetailsCache[order.userId].username
+                                                                        ? `/@${userDetailsCache[order.userId].username}`
+                                                                        : `/u/${order.userId}`
+                                                                    }
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <div>
                                                         <div className="flex justify-between items-start">
                                                             <div>
@@ -518,7 +661,7 @@ const AdminOrders = () => {
 
                                                     <div className="pt-4 border-t border-white/10">
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <p className="text-xs text-muted-foreground">Public Profile Link ID</p>
+                                                            <p className="text-xs text-muted-foreground">Internal User ID</p>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(order.userId); toast.success("Copied ID"); }}
                                                                 className="p-1 hover:bg-white/10 rounded transition-all flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"

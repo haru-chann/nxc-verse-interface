@@ -64,6 +64,13 @@ const ProfileEditor = () => {
   const [loading, setLoading] = useState(true);
   const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [username, setUsername] = useState("");
+  const [initialUsername, setInitialUsername] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameLastChanged, setUsernameLastChanged] = useState<any>(null);
+
   const [initialData, setInitialData] = useState<any>(null); // Store deep copy of initial state for undo detection
 
   // Helper to get current state snapshot for comparison
@@ -74,7 +81,8 @@ const ProfileEditor = () => {
     privateContents,
     isPublic,
     pinEnabled,
-    pin
+    pin,
+    username // Track username in combined state for save button
   });
 
   // Effect to check for changes
@@ -83,7 +91,51 @@ const ProfileEditor = () => {
     const currentState = getCurrentState();
     const hasChanges = JSON.stringify(currentState) !== JSON.stringify(initialData);
     setHasUnsavedChanges(hasChanges);
-  }, [profileData, links, portfolioItems, privateContents, isPublic, pinEnabled, pin, initialData]);
+  }, [profileData, links, portfolioItems, privateContents, isPublic, pinEnabled, pin, username, initialData]);
+
+  // Username Availability Checker (Debounced)
+  useEffect(() => {
+    const checkAvailability = async () => {
+      // IF empty (removing username) OR unchanged -> All good
+      if (!username || username === initialUsername) {
+        setUsernameAvailable(null);
+        setUsernameError("");
+        return;
+      }
+
+      // Format Validation
+      const validFormat = /^[a-zA-Z0-9_]+$/.test(username);
+      if (!validFormat) {
+        setUsernameError("Alphanumeric & underscores only");
+        setUsernameAvailable(false);
+        return;
+      }
+
+      // Length Validation (Client-side, simplistic - server decides admin exception, but we can hint)
+      // We'll let server handle the admin exception completely for simplicity, or we can check role if avail.
+      if (username.length < 5 && profileData.role !== 'admin') {
+        setUsernameError("Min 5 characters");
+        setUsernameAvailable(false);
+        return;
+      }
+
+      setIsCheckingUsername(true);
+      setUsernameError("");
+
+      try {
+        const available = await userService.checkUsernameAvailable(username);
+        setUsernameAvailable(available);
+        if (!available) setUsernameError("Username taken");
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+
+    const timer = setTimeout(checkAvailability, 500);
+    return () => clearTimeout(timer);
+  }, [username, initialUsername, profileData.role]);
 
   // Load data
   useEffect(() => {
@@ -95,60 +147,59 @@ const ProfileEditor = () => {
 
         if (data) {
           console.log("Loaded profile data:", data); // Debug log
-          setProfileData({
+
+          // Define profile state once to ensure key order consistency between state and initialData
+          const profileState = {
             displayName: data.displayName || "",
             firstName: data.firstName || "",
             lastName: data.lastName || "",
             email: currentUser.email || "",
-            bio: data.bio || "",
-            location: data.location || "",
             title: (data as any).title || "",
+            bio: data.bio || "",
             company: (data as any).company || "",
+            location: data.location || "",
             phone: (data as any).phone || "",
             photoURL: (data as any).photoURL || "",
             coverImage: (data as any).coverImage || "",
             isWallpaperBlurred: (data as any).isWallpaperBlurred || false,
-          });
+          };
+
+          setProfileData(profileState);
 
           // Load extended data if available
           if ((data as any).links) setLinks((data as any).links);
           if ((data as any).portfolioItems) setPortfolioItems((data as any).portfolioItems);
           if ((data as any).isPublic !== undefined) setIsPublic((data as any).isPublic);
 
-          // Load private data from secure path if available, otherwise fallback to public doc (migration)
+          // Username
+          if (data.username) {
+            setUsername(data.username);
+            setInitialUsername(data.username);
+          }
+          if (data.usernameLastChanged) {
+            setUsernameLastChanged(data.usernameLastChanged);
+          }
+
+          // Load private data
           if (privateData) {
             setPrivateContents((privateData as any).privateContents || []);
             setPinEnabled((privateData as any).pinEnabled !== undefined ? (privateData as any).pinEnabled : true);
             setPin((privateData as any).pin || "1234");
           } else {
-            // Fallback for old data structure
             if ((data as any).privateContents) setPrivateContents((data as any).privateContents);
             if ((data as any).pinEnabled !== undefined) setPinEnabled((data as any).pinEnabled);
             if ((data as any).pin) setPin((data as any).pin);
           }
 
-          // Construct the initial state object directly from the fetched data
-          // We cannot use getCurrentState() here because the state setters above (setLinks, etc.)
-          // might not have applied yet due to React batching.
           setInitialData({
-            displayName: data.displayName || "",
-            firstName: data.firstName || "",
-            lastName: data.lastName || "",
-            email: currentUser.email || "",
-            bio: data.bio || "",
-            location: data.location || "",
-            title: (data as any).title || "",
-            company: (data as any).company || "",
-            phone: (data as any).phone || "",
-            photoURL: (data as any).photoURL || "",
-            coverImage: (data as any).coverImage || "",
-            isWallpaperBlurred: (data as any).isWallpaperBlurred || false,
+            ...profileState,
             links: (data as any).links || [],
             portfolioItems: (data as any).portfolioItems || [],
-            isPublic: (data as any).isPublic !== undefined ? (data as any).isPublic : true,
             privateContents: privateData ? ((privateData as any).privateContents || []) : ((data as any).privateContents || []),
+            isPublic: (data as any).isPublic !== undefined ? (data as any).isPublic : true,
             pinEnabled: privateData ? ((privateData as any).pinEnabled !== undefined ? (privateData as any).pinEnabled : true) : ((data as any).pinEnabled !== undefined ? (data as any).pinEnabled : true),
-            pin: privateData ? ((privateData as any).pin || "1234") : ((data as any).pin || "1234")
+            pin: privateData ? ((privateData as any).pin || "1234") : ((data as any).pin || "1234"),
+            username: data.username || ""
           });
         }
       } catch (error) {
@@ -252,8 +303,20 @@ const ProfileEditor = () => {
         pin: pin,
       };
 
+      // 1. Handle Username Claim if changed
+      if (username !== initialUsername) {
+        // Only block if there's an actual error, OR if it's NOT empty and NOT available
+        if (usernameError || (username && usernameAvailable === false)) {
+          throw new Error("Invalid username. Please fix errors before saving.");
+        }
+        // The role param is important for the length exception
+        await userService.claimUsername(currentUser.uid, username, profileData.role || "user");
+        // Update initial so we don't re-claim
+        setInitialUsername(username);
+      }
+
       await userService.updateUserProfile(currentUser.uid, updateData);
-      await userService.updateUserProfile(currentUser.uid, updateData);
+      // await userService.updateUserProfile(currentUser.uid, updateData); // Duplicate call removed
       await userService.updateUserPrivateData(currentUser.uid, privateUpdateData);
 
       // Update initial data to current state so button disappears
@@ -459,7 +522,7 @@ const ProfileEditor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background -m-4 lg:-m-8">
+    <div className="min-h-screen bg-background -m-4 lg:-m-8 max-w-[100vw] overflow-x-hidden">
       <div className="w-full h-full space-y-8">
 
         {/* Upgrade Modal */}
@@ -531,6 +594,49 @@ const ProfileEditor = () => {
                     placeholder="Display Name"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Username
+                    {usernameLastChanged && profileData.role !== 'admin' && (
+                      <span className="ml-2 text-xs text-muted-foreground font-normal">
+                        (Locked: {(() => {
+                          const diff = Math.ceil((30 * 24 * 60 * 60 * 1000 - (Date.now() - usernameLastChanged.toDate().getTime())) / (1000 * 60 * 60 * 24));
+                          return diff > 0 && diff <= 30 ? `${diff} days left` : "Can change";
+                        })()})
+                      </span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 flex items-center justify-center">@</span>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className={`w-full pl-10 pr-10 py-3 rounded-xl bg-muted border ${usernameError ? "border-destructive" :
+                        (usernameAvailable && username !== initialUsername && username.length > 0) ? "border-green-500" :
+                          "border-border"
+                        } focus:outline-none text-foreground`}
+                      placeholder="username (optional)"
+                      maxLength={20}
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      {isCheckingUsername && <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
+                    </div>
+                  </div>
+                  {usernameError && <p className="text-xs text-destructive mt-1">{usernameError}</p>}
+                  {!usernameError && username && usernameAvailable && username !== initialUsername && (
+                    <p className="text-xs text-green-500 mt-1">Available!</p>
+                  )}
+                  {!usernameError && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      View Link: <span className="text-primary">
+                        {username ? `${window.location.host}/@${username}` : `${window.location.host}/u/${currentUser?.uid}`}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Title</label>
                   <input

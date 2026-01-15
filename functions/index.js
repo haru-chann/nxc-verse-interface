@@ -57,34 +57,7 @@ exports.createPurchase = onCall({ cors: true }, async (request) => {
 
         const rzpOrder = await razorpay.orders.create(options);
 
-        // C. Create Firestore Order
-        const orderData = {
-            userId,
-            planId,
-            item: {
-                id: planId,
-                name: planData.name,
-                price: planData.price,
-                currency: "INR"
-            },
-            amount: planData.price,
-            currency: "INR",
-            status: "pending_payment",
-            razorpayOrderId: rzpOrder.id,
-            paymentId: null,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            shippingDetails,
-            customization: customization || {},
-            formSnapshot: formSnapshot || [],
-            timeline: [
-                { status: "Order Initiated", date: new Date().toISOString(), completed: true }
-            ]
-        };
-
-        const orderRef = await db.collection("orders").add(orderData);
-
         return {
-            orderId: orderRef.id,
             razorpayOrderId: rzpOrder.id,
             amount: amountInPaise,
             key: process.env.RAZORPAY_KEY_ID
@@ -100,38 +73,77 @@ exports.createPurchase = onCall({ cors: true }, async (request) => {
  * 2. Verify Purchase (Callable - Gen 2)
  */
 exports.verifyPurchase = onCall({ cors: true }, async (request) => {
-    const { dbOrderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = request.data;
-    // Note: Verify often needs to be public-ish or at least callable by anyone with the right signatures?
-    // Usually it IS called by the client who IS logged in. Use auth context if rigorous security needed.
+    const {
+        razorpayPaymentId,
+        razorpayOrderId,
+        razorpaySignature,
+        // New Payload items for deferred creation:
+        planId,
+        shippingDetails,
+        customization,
+        formSnapshot
+    } = request.data;
+
+    // Auth check is critical now that we are writing data
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "User must be logged in.");
+    }
+    const userId = request.auth.uid;
 
     try {
         const secret = process.env.RAZORPAY_KEY_SECRET || "YOUR_KEY_SECRET";
 
-        // Signature Verification
+        // 1. Signature Verification
         const generated_signature = crypto
             .createHmac("sha256", secret)
             .update(razorpayOrderId + "|" + razorpayPaymentId)
             .digest("hex");
 
-        if (generated_signature === razorpaySignature) {
-            await db.collection("orders").doc(dbOrderId).update({
-                status: "order_received",
-                paymentId: razorpayPaymentId,
-                verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-                timeline: admin.firestore.FieldValue.arrayUnion({
-                    status: "Payment Received",
-                    date: new Date().toISOString(),
-                    completed: true
-                })
-            });
-            return { success: true };
-        } else {
-            await db.collection("orders").doc(dbOrderId).update({
-                status: "payment_failed",
-                failureReason: "Signature Mismatch"
-            });
+        if (generated_signature !== razorpaySignature) {
             throw new HttpsError("permission-denied", "Invalid Signature");
         }
+
+        // 2. Fetch Plan to validate Amount/Data (Double Security)
+        const planDoc = await db.collection("plans").doc(planId).get();
+        let planData = planDoc.exists ? planDoc.data() : null;
+
+        // Fallback plan logic (same as createPurchase)
+        if (!planData) {
+            if (planId === 'plus') planData = { name: "Plus", price: 499 };
+            else if (planId === 'platinum') planData = { name: "Platinum", price: 999 };
+            else if (planId === 'ultra') planData = { name: "Ultra Premium", price: 1499 };
+            else throw new HttpsError("not-found", "Plan not found");
+        }
+
+        // 3. Create the Order Document (Deferring Write complete)
+        const orderData = {
+            userId,
+            planId,
+            item: {
+                id: planId,
+                name: planData.name,
+                price: planData.price,
+                currency: "INR"
+            },
+            amount: planData.price,
+            currency: "INR",
+            status: "order_received", // Directly to Paid status
+            razorpayOrderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+            shippingDetails,
+            customization: customization || {},
+            formSnapshot: formSnapshot || [],
+            timeline: [
+                { status: "Order Initiated", date: new Date().toISOString(), completed: true },
+                { status: "Payment Received", date: new Date().toISOString(), completed: true }
+            ]
+        };
+
+        const orderRef = await db.collection("orders").add(orderData);
+
+        return { success: true, orderId: orderRef.id };
 
     } catch (error) {
         console.error("Verification Error:", error);

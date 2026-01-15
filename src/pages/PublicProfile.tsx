@@ -1,6 +1,7 @@
+import NotFound from "./NotFound";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -33,7 +34,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const PublicProfile = () => {
-  const { uid } = useParams();
+  const { uid, usernameParam } = useParams();
   const { currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -41,15 +42,15 @@ const PublicProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [errorAlert, setErrorAlert] = useState({ isOpen: false, message: "" });
+  const [resolvedUid, setResolvedUid] = useState<string | null>(null); // Track the actual UID being viewed
 
+  // ... (existing state variables)
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pin, setPin] = useState("");
   const [showPinInput, setShowPinInput] = useState(false);
-  // Replaced simple boolean with action string for smarter redirects
   const [loginPromptAction, setLoginPromptAction] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  // Report System State
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportReasons, setReportReasons] = useState<string[]>([]);
   const [reportDescription, setReportDescription] = useState("");
@@ -63,73 +64,129 @@ const PublicProfile = () => {
     "Other"
   ];
 
-  const isOwnProfile = currentUser?.uid === uid;
+  const location = useLocation();
 
-  // Log View on Mount
+  const isOwnProfile = currentUser?.uid === resolvedUid;
+
+  // Analytics: Log View on Mount or when resolvedUid changes
   useEffect(() => {
-    if (uid && !authLoading) {
-      // Don't log views from the profile owner
-      if (currentUser?.uid === uid) return;
+    if (resolvedUid && !authLoading) {
+      // 1. Check if this is a "Tap" redirect (Taps != Views)
+      // Check both State and Query Param for "Tap" origin
+      const searchParams = new URLSearchParams(location.search);
+      const fromTap = location.state?.fromTap || searchParams.get('origin') === 'tap';
 
-      const visitorData = currentUser ? {
-        visitorId: currentUser.uid,
-        name: currentUser.displayName || "Anonymous User",
-        email: currentUser.email,
-        source: 'web'
-      } : { source: 'web' };
+      if (!fromTap) {
+        // 2. View Logic (Direct Visit)
+        if (!isOwnProfile) {
+          // Check session storage to prevent spam/F5 refreshing
+          const sessionKey = `viewed_${resolvedUid}`;
+          const hasViewedSession = sessionStorage.getItem(sessionKey);
 
-      interactionService.logInteraction(uid, "view", visitorData);
-    }
-  }, [uid, currentUser, authLoading]);
+          if (!hasViewedSession) {
+            // A. Increment "stats.views" counter
+            userService.incrementProfileView(resolvedUid);
 
-  // Handle Redirect Actions (e.g. after login)
-  useEffect(() => {
-    if (!authLoading && currentUser && !loading) {
-      const params = new URLSearchParams(window.location.search);
-      const action = params.get("action");
+            // B. Log Interaction (Graph/Notifications)
+            // MOVED INSIDE: Only log if it's a real view, not a tap
+            const visitorData = currentUser ? {
+              visitorId: currentUser.uid,
+              name: currentUser.displayName || "Anonymous User",
+              email: currentUser.email,
+              source: 'web_profile'
+            } : {
+              source: 'web_profile'
+            };
 
-      if (action === "report") {
-        // Clear param to prevent loop/re-open? 
-        // handleReportOpen(); // Reuse logic
-        setIsReportOpen(true);
-      } else if (action === "message") {
-        const contactElement = document.getElementById("contact-form");
-        if (contactElement) {
-          contactElement.scrollIntoView({ behavior: "smooth" });
-          toast({ title: "Ready to Message", description: "You can now send your message." });
+            interactionService.logInteraction(resolvedUid, "view", visitorData).catch(err => console.error("Log error", err));
+
+            // Set session lock
+            sessionStorage.setItem(sessionKey, 'true');
+          }
         }
       }
     }
-  }, [authLoading, currentUser, loading]);
+  }, [resolvedUid, currentUser, authLoading, location.state, location.search]);
+
+  // ... (Handle Redirect Actions useEffect - unchanged)
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!uid) return;
-      try {
-        const data = await userService.getUserProfile(uid);
-        if (data) {
-          // If user is banned, hide their profile completely (act as 404)
-          if (data.isBanned) {
-            setError("Page Not Found");
-            return;
+      // Logic for /@username (captured as /:usernameParam)
+      if (usernameParam) {
+        // Validate format: must start with @
+        if (!usernameParam.startsWith('@')) {
+          setError("Page Not Found");
+          setLoading(false);
+          return;
+        }
+
+        const targetUsername = usernameParam.substring(1); // Strip '@'
+
+        setLoading(true);
+        try {
+          const fetchedProfile = await userService.getUserByUsername(targetUsername);
+
+          if (fetchedProfile) {
+            if (fetchedProfile.isBanned) {
+              setError("Page Not Found"); // Mask banned users
+            } else {
+              setProfileData(fetchedProfile);
+              setResolvedUid(fetchedProfile.uid);
+            }
+          } else {
+            setError("Profile not found");
           }
-          setProfileData(data);
-        } else {
-          setError("Profile not found");
+        } catch (err) {
+          console.error("Error in loadProfile:", err);
+          setError("Failed to load profile");
+        } finally {
+          setLoading(false);
         }
-      } catch (err: any) {
-        console.error(err);
-        if (err.code === 'permission-denied') {
-          setError("Access Denied: Please check Firestore Security Rules. Public read access is required.");
-        } else {
-          setError("Failed to load profile: " + (err.message || "Unknown error"));
+        return;
+      }
+
+      // Logic for /u/:uid
+      if (uid) {
+        setLoading(true);
+        try {
+          const data = await userService.getUserProfile(uid);
+          if (data) {
+            if (data.isBanned) {
+              setError("Page Not Found");
+              setLoading(false);
+              return;
+            }
+
+            // REDIRECT CHECK: If user has a username, redirect to /@username
+            if (data.username) {
+              // Preserve Query Params (e.g. ?origin=tap) and State to ensure Analytics consistency
+              navigate(
+                { pathname: `/@${data.username}`, search: location.search },
+                { replace: true, state: location.state }
+              );
+              return;
+            }
+
+            setProfileData(data);
+            setResolvedUid(data.uid);
+          } else {
+            setError("Profile not found");
+          }
+        } catch (err: any) {
+          console.error(err);
+          if (err.code === 'permission-denied') {
+            setError("Access Denied: Please check Firestore Security Rules. Public read access is required.");
+          } else {
+            setError("Failed to load profile: " + (err.message || "Unknown error"));
+          }
+        } finally {
+          setLoading(false);
         }
-      } finally {
-        setLoading(false);
       }
     };
     loadProfile();
-  }, [uid]);
+  }, [uid, usernameParam, navigate]);
 
   const handleSaveContact = async () => {
     if (!profileData || !uid) return;
@@ -357,7 +414,7 @@ const PublicProfile = () => {
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-foreground">Loading profile...</div>;
-  if (error || !profileData) return <div className="min-h-screen flex items-center justify-center text-foreground">Profile not found</div>;
+  if (error || !profileData) return <NotFound />;
 
   // Logic: If profile is NOT public, show limited view
   const isPublic = profileData.isPublic !== false; // Default to true if undefined, or check explicit false

@@ -24,6 +24,7 @@ import Signup from "./pages/Signup";
 import PublicProfile from "./pages/PublicProfile";
 import NotFound from "./pages/NotFound";
 import RedirectHandler from "./pages/RedirectHandler";
+import TapHandler from "./pages/TapHandler";
 
 // Dashboard Pages
 import DashboardHome from "./pages/dashboard/DashboardHome";
@@ -120,8 +121,10 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
-              {/* Public Profile */}
+              {/* Profile Routes */}
               <Route path="/u/:uid" element={<PublicProfile />} />
+              <Route path="/:usernameParam" element={<PublicProfile />} />
+              <Route path="/t/:nfcId" element={<TapHandler />} />
 
               {/* NFC Card Redirect */}
               <Route path="/c/:cardId" element={<RedirectHandler />} />

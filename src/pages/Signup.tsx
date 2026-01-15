@@ -15,6 +15,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { getFriendlyErrorMessage } from "@/lib/errorUtils";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/data/legalContent";
 
 const benefits = [
   "Free digital profile forever",
@@ -232,28 +235,7 @@ const Signup = () => {
               ))}
             </ul>
 
-            {/* Testimonial */}
-            <motion.div
-              className="mt-12"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <GlassCard className="p-6">
-                <p className="text-foreground mb-4 italic">
-                  "NXC Badge Verse has completely transformed how I network. I've made more meaningful connections in the last month than the entire previous year."
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary-foreground">SC</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground text-sm">Sarah Chen</p>
-                    <p className="text-xs text-muted-foreground">Tech Entrepreneur</p>
-                  </div>
-                </div>
-              </GlassCard>
-            </motion.div>
+
           </motion.div>
 
           {/* Right - Form */}
@@ -376,13 +358,37 @@ const Signup = () => {
                   />
                   <label htmlFor="terms" className="text-sm text-muted-foreground">
                     I agree to the{" "}
-                    <Link to="/terms" className="text-primary hover:underline">
-                      Terms of Service
-                    </Link>{" "}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <span className="text-primary hover:underline cursor-pointer">Terms of Service</span>
+                      </DialogTrigger>
+                      <DialogContent className="w-[95vw] sm:max-w-2xl p-6">
+                        <DialogHeader>
+                          <DialogTitle>Terms & Conditions</DialogTitle>
+                        </DialogHeader>
+                        <div className="max-h-[60vh] overflow-y-auto mt-4 pr-2 border rounded-md p-3 custom-scrollbar">
+                          <div className="whitespace-pre-wrap text-sm text-muted-foreground">
+                            {TERMS_AND_CONDITIONS}
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>{" "}
                     and{" "}
-                    <Link to="/privacy" className="text-primary hover:underline">
-                      Privacy Policy
-                    </Link>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <span className="text-primary hover:underline cursor-pointer">Privacy Policy</span>
+                      </DialogTrigger>
+                      <DialogContent className="w-[95vw] sm:max-w-2xl p-6">
+                        <DialogHeader>
+                          <DialogTitle>Privacy Policy</DialogTitle>
+                        </DialogHeader>
+                        <div className="max-h-[60vh] overflow-y-auto mt-4 pr-2 border rounded-md p-3 custom-scrollbar">
+                          <div className="whitespace-pre-wrap text-sm text-muted-foreground">
+                            {PRIVACY_POLICY}
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </label>
                 </div>
 

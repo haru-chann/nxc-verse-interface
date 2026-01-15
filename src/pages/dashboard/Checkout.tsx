@@ -179,7 +179,7 @@ const Checkout = () => {
                 formSnapshot: location.state?.formFields || []
             });
 
-            const { razorpayOrderId, orderId: dbOrderId, amount, key } = orderResponse.data;
+            const { razorpayOrderId, amount, key } = orderResponse.data;
 
             // 3. Open Razorpay Options
             const options = {
@@ -191,15 +191,20 @@ const Checkout = () => {
                 image: "/nxcverse.svg",
                 order_id: razorpayOrderId, // CRITICAL: Locks the amount
                 handler: async function (response: any) {
-                    toast.loading("Verifying Payment...", { id: toastId });
+                    toast.loading("Verifying Payment & Creating Order...", { id: toastId });
 
                     try {
-                        // 4. Verify Signature (Server-Side)
+                        // 4. Verify Signature & Create Order (Server-Side)
+                        // Refactored: We pass full data here because we didn't save it initially
                         await verifyPurchase({
-                            dbOrderId,
                             razorpayOrderId: response.razorpay_order_id,
                             razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature
+                            razorpaySignature: response.razorpay_signature,
+                            // Deferred Payload
+                            planId: selectedPlan?.id || "unknown",
+                            shippingDetails,
+                            customization: location.state?.customizationData || {},
+                            formSnapshot: location.state?.formFields || []
                         });
 
                         toast.dismiss(toastId);
