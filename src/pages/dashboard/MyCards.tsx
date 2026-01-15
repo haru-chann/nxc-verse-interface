@@ -346,11 +346,6 @@ const MyCards = () => {
                         );
                     })}
 
-                    <div className="mt-8 text-center sm:hidden">
-                        <NeonButton onClick={() => navigate("/pricing?minimal=true")} className="w-full flex items-center justify-center gap-2">
-                            Buy Another Card
-                        </NeonButton>
-                    </div>
                 </div>
             )}
 

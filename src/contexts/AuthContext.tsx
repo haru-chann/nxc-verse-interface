@@ -69,11 +69,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), async (snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.data();
+
+                // 1. Check Ban Status
                 if (data?.isBanned) {
                     await auth.signOut();
                     toast.error("Account Suspended", {
                         description: "Your account has been banned by an administrator."
                     });
+                    return;
+                }
+
+                // 2. Check for Role Updates (Sync Custom Claims)
+                // If Firestore says admin/super_admin but local state disagrees, or vice versa, refresh token.
+                // We use a simplified check: if the role in DB is different from what we expect based on current claims, refresh.
+                // Since claims are "hidden", we'll just force refresh if the doc updates and we want to be sure.
+                // improved optimization: only refresh if the role field specifically changed or if we suspect a mismatch.
+                // For critical admin promotions, just refresh is safer but might be rate limited if doc updates frequently.
+                // Let's check:
+                const dbRole = data?.role;
+                // We can't easily peek claims without parsing token, but we have isAdmin/isSuperAdmin state.
+                const hasAdminClaim = isAdmin || isSuperAdmin;
+                const shouldHaveAdminClaim = dbRole === 'admin' || dbRole === 'super_admin';
+
+                if (hasAdminClaim !== shouldHaveAdminClaim) {
+                    console.log("Role mismatch detected, refreshing claims...");
+                    await checkClaims(currentUser);
+                    toast.info("Permissions Updated", { description: "Your account permissions have been updated." });
+                } else if (dbRole === 'super_admin' && !isSuperAdmin) {
+                    // Specific case: admin -> super_admin promotion
+                    console.log("Super Admin promotion detected, refreshing claims...");
+                    await checkClaims(currentUser);
+                    toast.info("Permissions Updated", { description: "You are now a Super Admin." });
                 }
             }
         }, (error) => {
@@ -81,7 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         return () => unsubscribe();
-    }, [currentUser]);
+    }, [currentUser, isAdmin, isSuperAdmin]);
 
     const refreshClaims = async () => {
         if (currentUser) {

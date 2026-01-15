@@ -4,8 +4,10 @@ import { NeonButton } from "../ui/NeonButton";
 import { GradientText } from "../ui/GradientText";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const CTASection = () => {
+  const { currentUser } = useAuth();
   return (
     <section className="py-32 relative overflow-hidden">
       {/* Background Effects */}
@@ -52,9 +54,9 @@ export const CTASection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/signup">
+            <Link to={currentUser ? "/dashboard" : "/signup"}>
               <NeonButton size="lg">
-                Create Free Profile
+                {currentUser ? "Go to Dashboard" : "Create Free Profile"}
               </NeonButton>
             </Link>
             <Link to="/pricing">

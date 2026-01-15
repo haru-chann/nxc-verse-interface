@@ -115,6 +115,8 @@ export const useSubscriptionLimits = () => {
                             if (plan.features.customBranding) hasCustomBranding = true;
 
                             planNames.push(plan.name);
+                        } else {
+                            console.warn(`[Limits] Plan not found for order ${order.id}: ${planId}`);
                         }
                     });
 

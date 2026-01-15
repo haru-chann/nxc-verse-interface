@@ -81,9 +81,11 @@ const PublicProfile = () => {
         if (!isOwnProfile) {
           // Check session storage to prevent spam/F5 refreshing
           const sessionKey = `viewed_${resolvedUid}`;
-          const hasViewedSession = sessionStorage.getItem(sessionKey);
+          const currentTimestamp = Date.now();
+          const lastViewed = sessionStorage.getItem(sessionKey);
 
-          if (!hasViewedSession) {
+          // Allow internal refresh after 1 hour (optional), but primarily check existence
+          if (!lastViewed) {
             // A. Increment "stats.views" counter
             userService.incrementProfileView(resolvedUid);
 

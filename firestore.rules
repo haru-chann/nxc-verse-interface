@@ -143,13 +143,21 @@ service cloud.firestore {
         isAdmin() || 
         (
           // Non-Admins:
-          // 1. Length Check: Must be >= 5 chars (Only for Creation/Update)
+          // 1. Length Check: Must be >= 5 chars (Only for Creation)
+          // Note: If deleting, length doesn't matter.
           (request.method == 'delete' || username.size() >= 5) &&
           
           // 2. Ownership Check:
-          // - If Creating/Updating: The 'uid' field must match their Auth UID
-          // - If Deleting: The existing doc's 'uid' must match their Auth UID
-          (request.method == 'delete' ? resource.data.uid == request.auth.uid : request.resource.data.uid == request.auth.uid)
+          // - If Creating: The 'uid' field must match their Auth UID.
+          // - If Deleting: The existing doc's 'uid' must match their Auth UID.
+          (request.method == 'delete' ? resource.data.uid == request.auth.uid : request.resource.data.uid == request.auth.uid) &&
+
+          // 3. NO DIRECT UPDATES:
+          // Users cannot overwrite an existing username document to change ownership or properties.
+          // They can only CREATE (if it doesn't exist) or DELETE (if they own it).
+          // Changing a username implies Creating the new one and Deleting the old one (handled by transaction in client).
+          // But purely at the 'usernames' collection level:
+          (request.method == 'create' || request.method == 'delete')
         )
       );
     }

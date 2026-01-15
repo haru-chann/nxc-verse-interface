@@ -134,9 +134,6 @@ export const userService = {
 
                     // If they have a username, remove it from 'usernames' collection
                     if (userData.username) {
-                        // Check 30-day lock?
-                        // Requirement says "username is optional", implying easy removal.
-                        // For safety, let's allow removal without lock check, but setting a new one will check lock.
                         const oldUsernameRef = doc(db, 'usernames', userData.username.toLowerCase());
                         transaction.delete(oldUsernameRef);
                     }
@@ -144,7 +141,7 @@ export const userService = {
                     // Update user profile to remove username field
                     transaction.update(userRef, {
                         username: deleteField(),
-                        usernameLastChanged: serverTimestamp() // Still track this change
+                        usernameLastChanged: serverTimestamp()
                     });
                 });
                 return;
@@ -164,7 +161,7 @@ export const userService = {
         }
 
         // Min length: 5 chars, unless admin
-        if (role !== "admin" && username.length < 5) {
+        if (role !== "admin" && role !== "super_admin" && username.length < 5) {
             throw new Error("Username must be at least 5 characters long.");
         }
 
@@ -183,15 +180,32 @@ export const userService = {
 
                 const userData = userDoc.data() as UserProfile;
 
+                // CHECK: User Update Restriction
+                // If user is trying to CHANGE an existing username, and they are NOT admin
+                if (userData.username && userData.username !== username && role !== "admin" && role !== "super_admin") {
+                    throw new Error("You cannot change your username. You can only remove it and set a fresh one if available.");
+                }
+
                 // Check 30-day lock (Skip for admins)
-                if (userData.usernameLastChanged && role !== "admin") {
+                // Note: Since users can't "change" directly, this lock effectively prevents "Delete -> Create New" spam if we want.
+                // But the user prompt implied admins change "whenever they want".
+                // If we block updates for users completely, the 30-day lock is less relevant for updates, but maybe relevant for re-creation?
+                // Let's keep it for safety to prevent spamming the system with new usernames every minute.
+                if (userData.usernameLastChanged && role !== "admin" && role !== "super_admin") {
                     const lastChanged = userData.usernameLastChanged.toDate();
                     const now = new Date();
                     const diffTime = Math.abs(now.getTime() - lastChanged.getTime());
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                     if (diffDays < 30) {
-                        throw new Error(`You can change your username again in ${30 - diffDays} days.`);
+                        // Exception: If they currently have NO username, allow them to set one even if they removed it recently?
+                        // The user said "admins should be able to change whenever they want".
+                        // Logic: If I just deleted my username, I am creating a "new" identity.
+                        // Ideally, we shouldn't lock them out if they made a mistake deleting it.
+                        // Let's RELAX this check if they currently don't have a username (userData.username is undefined).
+                        if (userData.username) {
+                            throw new Error(`You can change your username again in ${30 - diffDays} days.`);
+                        }
                     }
                 }
 

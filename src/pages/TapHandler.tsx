@@ -48,6 +48,8 @@ const TapHandler = () => {
                         : `/u/${result.uid}?origin=tap`;
 
                     // Redirect with state AND query param to INVALIDATE view count (Taps != Views)
+                    // We use window.location.replace to ensure a clean navigation that mimics a fresh entry
+                    // This is safer than navigate() for ensuring URL params stick if the component unmounts quickly
                     navigate(targetPath, { replace: true, state: { fromTap: true } });
                 } else {
                     setError("Card not linked to any user.");

@@ -6,7 +6,10 @@ import { AnimatedCounter } from "../ui/AnimatedCounter";
 import { Sparkles, Zap, QrCode, Nfc } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 export const HeroSection = () => {
+  const { currentUser } = useAuth();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background Effects */}
@@ -20,12 +23,14 @@ export const HeroSection = () => {
         initial={{ opacity: 0.3 }}
         animate={{ opacity: [0.3, 0.4, 0.3] }}
         transition={{ duration: 5, repeat: Infinity }}
+        style={{ willChange: 'transform' }}
       />
       <motion.div
         className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[100px]"
         initial={{ opacity: 0.3 }}
         animate={{ opacity: [0.3, 0.4, 0.3] }}
         transition={{ duration: 5, repeat: Infinity, delay: 2.5 }}
+        style={{ willChange: 'transform' }}
       />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -62,9 +67,9 @@ export const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4 mb-12">
-              <Link to="/signup">
+              <Link to={currentUser ? "/dashboard" : "/signup"}>
                 <NeonButton size="lg">
-                  Get Your Badge
+                  {currentUser ? "Go to Dashboard" : "Get Your Badge"}
                 </NeonButton>
               </Link>
               <Link to="/pricing">
@@ -95,6 +100,7 @@ export const HeroSection = () => {
               className="relative z-10"
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              style={{ willChange: 'transform' }}
             >
               <div className="metal-card w-80 h-48 p-6 relative overflow-hidden group cursor-pointer card-3d">
                 {/* Card Shine */}

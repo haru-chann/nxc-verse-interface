@@ -38,8 +38,9 @@ const RedirectHandler = () => {
                             console.error("Failed to log interaction", logError);
                         }
 
+
                         // 3. Redirect to Profile
-                        window.location.href = `/u/${uid}`;
+                        window.location.href = `/u/${uid}?origin=tap`;
                         return;
                     }
                 }
