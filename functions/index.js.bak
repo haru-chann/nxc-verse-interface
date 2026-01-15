@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const Razorpay = require("razorpay");
@@ -199,5 +200,66 @@ exports.verifyMockPurchase = onCall({ cors: true }, async (request) => {
 
     } catch (error) {
         throw new HttpsError("internal", error.message);
+    }
+});
+
+/**
+ * 4. Sync User Roles (Firestore Trigger)
+ * Listens for changes to 'users/{userId}' and updates Auth Custom Claims.
+ * This fixes the issue where promote/demote doesn't reflect in Auth state.
+ */
+exports.syncUserRoles = onDocumentWritten("users/{userId}", async (event) => {
+    // 1. Check if document exists (it might be deleted)
+    if (!event.data.after.exists) {
+        return;
+    }
+
+    const userId = event.params.userId;
+    const newData = event.data.after.data();
+    const previousData = event.data.before.exists ? event.data.before.data() : {};
+
+    // 2. Check if relevant fields changed (role, admin, isBanned)
+    // We update claims if ANY of these change, or if it's a new document
+    const roleChanged = newData.role !== previousData.role;
+    const adminFlagChanged = newData.admin !== previousData.admin;
+    const banChanged = newData.isBanned !== previousData.isBanned;
+
+    if (!roleChanged && !adminFlagChanged && !banChanged && event.data.before.exists) {
+        return; // No relevant changes
+    }
+
+    try {
+        // 3. Determine Claims
+        // Logic: 
+        // - 'super_admin' role -> { super_admin: true, admin: true }
+        // - 'admin' role OR admin:true flag -> { admin: true, super_admin: false }
+        // - otherwise -> { admin: false, super_admin: false }
+
+        let claims = {
+            admin: false,
+            super_admin: false,
+            banned: newData.isBanned === true
+        };
+
+        if (newData.role === 'super_admin') {
+            claims.super_admin = true;
+            claims.admin = true;
+        } else if (newData.role === 'admin' || newData.admin === true) {
+            claims.admin = true;
+        }
+
+        // 4. Set Custom Claims
+        await admin.auth().setCustomUserClaims(userId, claims);
+
+        console.log(`[SyncUserRoles] Updated claims for ${userId}:`, claims);
+
+        // Optional: If banned, we can revoke refresh tokens to force logout immediately
+        if (claims.banned && !previousData.isBanned) {
+            await admin.auth().revokeRefreshTokens(userId);
+            console.log(`[SyncUserRoles] Revoked tokens for banned user ${userId}`);
+        }
+
+    } catch (error) {
+        console.error(`[SyncUserRoles] Error updating claims for ${userId}:`, error);
     }
 });

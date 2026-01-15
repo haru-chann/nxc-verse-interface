@@ -93,13 +93,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                 if (hasAdminClaim !== shouldHaveAdminClaim) {
                     console.log("Role mismatch detected, refreshing claims...");
-                    await checkClaims(currentUser);
-                    toast.info("Permissions Updated", { description: "Your account permissions have been updated." });
+
+                    // Force refresh to see if the backend has updated the claims yet
+                    const tokenResult = await currentUser.getIdTokenResult(true);
+                    const newIsAdmin = !!tokenResult.claims.admin;
+                    const newIsSuperAdmin = !!tokenResult.claims.super_admin;
+                    const newHasClaim = newIsAdmin || newIsSuperAdmin;
+
+                    // Only toast if the sync actually SUCCEEDED
+                    if (newHasClaim === shouldHaveAdminClaim) {
+                        setIsAdmin(newIsAdmin);
+                        setIsSuperAdmin(newIsSuperAdmin);
+                        toast.success("Permissions Synced", { description: "Your admin access is now active." });
+                    } else {
+                        console.log("Claims validation pending... (Backend sync in progress)");
+                        // Do not toast here. We wait for the next snapshot or manual refresh.
+                    }
                 } else if (dbRole === 'super_admin' && !isSuperAdmin) {
                     // Specific case: admin -> super_admin promotion
-                    console.log("Super Admin promotion detected, refreshing claims...");
-                    await checkClaims(currentUser);
-                    toast.info("Permissions Updated", { description: "You are now a Super Admin." });
+                    const tokenResult = await currentUser.getIdTokenResult(true);
+                    if (tokenResult.claims.super_admin) {
+                        setIsSuperAdmin(true);
+                        setIsAdmin(true);
+                        toast.success("Permissions Upgraded", { description: "You are now a Super Admin." });
+                    }
                 }
             }
         }, (error) => {
