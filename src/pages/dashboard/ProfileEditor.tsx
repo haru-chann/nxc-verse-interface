@@ -522,7 +522,7 @@ const ProfileEditor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background -m-4 lg:-m-8 max-w-[100vw] overflow-x-hidden">
+    <div className="w-full min-h-screen bg-background pb-8">
       <div className="w-full h-full space-y-8">
 
         {/* Upgrade Modal */}
@@ -533,7 +533,7 @@ const ProfileEditor = () => {
           description={upgradeReason}
         />
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between sticky top-16 lg:top-0 z-40 bg-background/80 backdrop-blur-md py-4 px-4 lg:px-8 border-b border-border/50 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between sticky top-16 lg:top-0 z-40 bg-background/80 backdrop-blur-md py-4 border-b border-border/50 gap-4 mb-8">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold font-display text-foreground">Profile Editor</h1>
             <p className="text-sm lg:text-base text-muted-foreground mt-1">Customize your digital identity</p>
@@ -541,7 +541,7 @@ const ProfileEditor = () => {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8 px-4 lg:px-8 pb-8">
+      <div className="grid lg:grid-cols-3 gap-8">
         {/* Main Editor */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Info */}
