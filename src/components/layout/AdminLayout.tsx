@@ -74,28 +74,7 @@ export const AdminLayout = () => {
                     </button>
                 )}
 
-                {/* Desktop Collapse Button */}
-                {!isMobile && (
-                    <>
-                        <button
-                            onClick={() => setCollapsed(!collapsed)}
-                            className={cn(
-                                "hidden lg:block p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground",
-                                collapsed && "hidden"
-                            )}
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        {collapsed && (
-                            <button
-                                onClick={() => setCollapsed(false)}
-                                className="hidden lg:flex absolute top-6 right-[-12px] w-6 h-6 bg-border rounded-full items-center justify-center hover:bg-primary hover:text-white transition-colors z-50"
-                            >
-                                <ChevronRight className="w-3 h-3" />
-                            </button>
-                        )}
-                    </>
-                )}
+                {/* Desktop Collapse Button - REMOVED (Moved to Footer) */}
             </div>
 
             {/* Navigation */}
@@ -183,9 +162,22 @@ export const AdminLayout = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/10">
+            <div className="p-4 border-t border-white/10 space-y-2">
+                {!isMobile && (
+                    <button
+                        onClick={() => setCollapsed(!collapsed)}
+                        className={cn(
+                            "w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors text-muted-foreground",
+                            collapsed ? "justify-center" : ""
+                        )}
+                    >
+                        {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                        {!collapsed && <span className="text-sm font-medium">Collapse</span>}
+                    </button>
+                )}
+
                 <Link to="/dashboard" onClick={() => isMobile && setMobileOpen(false)}>
-                    <button className={cn("w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors text-muted-foreground mb-2", !isMobile && collapsed ? "justify-center" : "")}>
+                    <button className={cn("w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors text-muted-foreground", !isMobile && collapsed ? "justify-center" : "")}>
                         <Globe className="w-5 h-5" />
                         {(isMobile || !collapsed) && <span className="text-sm font-medium">Public Site</span>}
                     </button>
