@@ -36,7 +36,10 @@ service cloud.firestore {
           isSuperAdmin() ||
           
           // C. Admin (Restricted: Can only update standard 'user' accounts, cannot change roles)
-          (isAdmin() && (resource.data.role == 'user' || resource.data.role == null) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'admin', 'super_admin']))
+          (isAdmin() && (resource.data.role == 'user' || resource.data.role == null) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'admin', 'super_admin'])) ||
+
+          // D. Admin generating NFC ID (Special Case: Can update nfcId on ANY user)
+          (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nfcId']))
         ));
       
       // Delete: Only user (or maybe super admin?)

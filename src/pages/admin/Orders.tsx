@@ -73,24 +73,23 @@ const AdminOrders = () => {
     }, [searchParams]);
 
     // Filter Logic - Server Side now
+    const [indexLink, setIndexLink] = useState<string | null>(null); // [NEW] Track index URL
+
     const fetchOrders = async (pageIndex = 1, direction: 'next' | 'prev' | 'init' = 'init') => {
         setLoading(true);
+        setIndexLink(null); // Reset error
         try {
             // [NEW] Deep Linking Check
             const deepMatchId = searchParams.get("orderId");
             if (deepMatchId && direction === 'init' && pageIndex === 1) {
-                // If we have a deep link ID, we fetch JUST that order to ensure it's visible and expanded
-                const docRef = doc(db, "orders", deepMatchId);
-                const docSnap = await getDocs(query(collection(db, "orders"), where("__name__", "==", deepMatchId))); // specialized query or getDoc 
-
-                // Better to use getDoc usually, but to keep type consistency with array:
+                const docSnap = await getDocs(query(collection(db, "orders"), where("__name__", "==", deepMatchId)));
                 if (!docSnap.empty) {
                     const fetchedOrder = { id: docSnap.docs[0].id, ...docSnap.docs[0].data() } as Order;
                     setOrders([fetchedOrder]);
                     setExpandedOrderId(deepMatchId);
-                    setHasMore(false); // Disable pagination logic when showing single deep-linked item
+                    setHasMore(false);
                     setLoading(false);
-                    return; // EXIT EARLY
+                    return;
                 }
             }
 
@@ -102,16 +101,20 @@ const AdminOrders = () => {
 
             // Apply Filters
             const filterConstraints: any[] = [];
-            const PAID_STATUSES = ["order_received", "processing", "shipped", "delivered"];
+
+            // "Show Pending Only" creates a specific view
+            const SHOW_STATUSES = ["order_received", "processing", "shipped", "delivered", "cancelled"];
 
             if (showPendingOnly) {
-                // "Pending" in UI context means "Pending Fulfillment" (Paid but not delivered)
+                // Explicitly show ONLY the active statuses (excluding pending_payment/cancelled if desired, but "Pending" button usually implies "Needs Action")
+                // Adjusting logic: logic remains consistent with previous intent -> "Not Delivered yet"
                 filterConstraints.push(where("status", "in", ["order_received", "processing", "shipped"]));
             } else if (statusFilter !== 'all') {
                 filterConstraints.push(where("status", "==", statusFilter));
             } else {
-                // Default "All" view now only shows PAID orders
-                filterConstraints.push(where("status", "in", PAID_STATUSES));
+                // DEFAULT VIEW: Show EVERYTHING except 'pending_payment'
+                // We use 'in' operator to avoid "Inequality (!=) cannot be the first filter" index issues.
+                filterConstraints.push(where("status", "in", SHOW_STATUSES));
             }
 
             // Combine constraints
@@ -121,13 +124,6 @@ const AdminOrders = () => {
             if (direction === 'next' && lastDocs[pageIndex - 2]) {
                 constraints.push(startAfter(lastDocs[pageIndex - 2]));
             } else if (direction === 'prev' && pageIndex > 1) {
-                // For prev, we go to pageIndex (which is prevPage). 
-                // The cursor for Page N is the last doc of Page N-1.
-                // So for Page 2, we need last doc of Page 1.
-                // lastDocs array: [End of Page 1, End of Page 2, ...]
-                // Index 0 is End of Page 1.
-                // So for Page 2 (index 2-2 = 0), we use lastDocs[0].
-                // For Page 1, we don't startAfter.
                 if (lastDocs[pageIndex - 2]) {
                     constraints.push(startAfter(lastDocs[pageIndex - 2]));
                 }
@@ -138,31 +134,24 @@ const AdminOrders = () => {
             try {
                 const q = query(ordersRef, ...constraints);
                 querySnapshot = await getDocs(q);
-            } catch (indexError: any) {
-                // FALLBACK: If index is missing, fetch WITHOUT status filters
-                if (indexError?.message?.includes("index")) {
-                    console.warn("Index missing, falling back to simple query.");
-                    toast.error("Missing Index: Filters disabled. Showing all orders.", { duration: 5000 });
-
-                    // Simple query: Date sort only (Standard index usually exists)
-                    // We must still respect pagination if possible, but let's reset to basics for safety
-                    const fallbackConstraints = [
-                        orderBy("createdAt", "desc"),
-                        limit(ORDERS_PER_PAGE)
-                    ];
-
-                    // Try to keep pagination cursor if it exists
-                    if (direction === 'next' && lastDocs[pageIndex - 2]) {
-                        fallbackConstraints.push(startAfter(lastDocs[pageIndex - 2]));
-                    } else if (direction === 'prev' && pageIndex > 1 && lastDocs[pageIndex - 2]) {
-                        fallbackConstraints.push(startAfter(lastDocs[pageIndex - 2]));
+            } catch (error: any) {
+                // Catch Index Error and EXTRACT LINK
+                if (error?.message?.includes("index")) {
+                    console.error("Missing Index Error:", error);
+                    // Extract URL
+                    const match = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+                    if (match) {
+                        setIndexLink(match[0]);
+                        toast.error("Database Index Missing. Please click the link in the Admin Panel to create it.");
+                    } else {
+                        toast.error("Database Index Missing. Check console for link.");
                     }
-
-                    const fallbackQ = query(ordersRef, ...fallbackConstraints);
-                    querySnapshot = await getDocs(fallbackQ);
-                } else {
-                    throw indexError; // Re-throw other errors
+                    // Do NOT fallback to showing all orders (security/privacy)
+                    setOrders([]);
+                    setLoading(false);
+                    return;
                 }
+                throw error;
             }
 
             const fetchedOrders: Order[] = [];
@@ -173,14 +162,11 @@ const AdminOrders = () => {
             // Pagination State Updates
             if (fetchedOrders.length > 0) {
                 const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-
                 if (direction === 'next' || (direction === 'init' && pageIndex === 1)) {
                     const newLastDocs = [...lastDocs];
-                    // If init page 1, reset
                     if (direction === 'init' && pageIndex === 1) {
                         setLastDocs([lastVisible]);
                     } else {
-                        // Store cursor for current page end
                         newLastDocs[pageIndex - 1] = lastVisible;
                         setLastDocs(newLastDocs);
                     }
@@ -193,7 +179,6 @@ const AdminOrders = () => {
             setOrders(fetchedOrders);
         } catch (error: any) {
             console.error("Error fetching orders:", error);
-            // Log full error to help debug
             toast.error("Failed to fetch: " + (error?.message || "Unknown Error"));
         } finally {
             setLoading(false);
@@ -212,13 +197,15 @@ const AdminOrders = () => {
                 const constraints: any[] = [];
                 const PAID_STATUSES = ["order_received", "processing", "shipped", "delivered"];
 
+                const SHOW_STATUSES = ["order_received", "processing", "shipped", "delivered", "cancelled"];
+
                 if (showPendingOnly) {
                     constraints.push(where("status", "in", ["order_received", "processing", "shipped"]));
                 } else if (statusFilter !== 'all') {
                     constraints.push(where("status", "==", statusFilter));
                 } else {
-                    // Default count also respects Paid Only
-                    constraints.push(where("status", "in", PAID_STATUSES));
+                    // Default count also respects Paid Only (Consistent with Fetch)
+                    constraints.push(where("status", "in", SHOW_STATUSES));
                 }
                 const countQuery = query(ordersRef, ...constraints);
                 const snapshot = await getCountFromServer(countQuery);
@@ -331,6 +318,28 @@ const AdminOrders = () => {
             </div>
 
             {/* Smart Controls */}
+            {indexLink && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex flex-col md:flex-row items-center gap-4 justify-between animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-500/20 rounded-lg">
+                            <Sparkles className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-red-500">Database Setup Required</h3>
+                            <p className="text-sm text-red-400/80">A new index is required to exclude "pending payment" orders efficiently.</p>
+                        </div>
+                    </div>
+                    <a
+                        href={indexLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm transition-colors whitespace-nowrap"
+                    >
+                        Create Index Now &rarr;
+                    </a>
+                </div>
+            )}
+
             <div className="flex flex-wrap items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/10">
                 <button
                     onClick={() => {

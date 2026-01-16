@@ -63,6 +63,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     // Real-time Ban Check & Role Sync
+    const lastCheckTime = React.useRef<number>(0);
+
     useEffect(() => {
         if (!currentUser) return;
 
@@ -80,18 +82,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 }
 
                 // 2. Check for Role Updates (Sync Custom Claims)
-                // If Firestore says admin/super_admin but local state disagrees, or vice versa, refresh token.
-                // We use a simplified check: if the role in DB is different from what we expect based on current claims, refresh.
-                // Since claims are "hidden", we'll just force refresh if the doc updates and we want to be sure.
-                // improved optimization: only refresh if the role field specifically changed or if we suspect a mismatch.
-                // For critical admin promotions, just refresh is safer but might be rate limited if doc updates frequently.
-                // Let's check:
+                // Rate Limiting: Only allow one check every 10 seconds to prevent loops
+                const now = Date.now();
+                if (now - lastCheckTime.current < 10000) {
+                    return;
+                }
+
                 const dbRole = data?.role;
                 // We can't easily peek claims without parsing token, but we have isAdmin/isSuperAdmin state.
                 const hasAdminClaim = isAdmin || isSuperAdmin;
                 const shouldHaveAdminClaim = dbRole === 'admin' || dbRole === 'super_admin';
 
                 if (hasAdminClaim !== shouldHaveAdminClaim) {
+                    lastCheckTime.current = now; // Update timestamp
                     console.log("Role mismatch detected, refreshing claims...");
 
                     // Force refresh to see if the backend has updated the claims yet
@@ -111,6 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     }
                 } else if (dbRole === 'super_admin' && !isSuperAdmin) {
                     // Specific case: admin -> super_admin promotion
+                    lastCheckTime.current = now; // Update timestamp
                     const tokenResult = await currentUser.getIdTokenResult(true);
                     if (tokenResult.claims.super_admin) {
                         setIsSuperAdmin(true);

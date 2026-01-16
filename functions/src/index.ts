@@ -13,12 +13,13 @@ setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 admin.initializeApp();
 const db = admin.firestore();
 
-// Initialize Razorpay
-// Using process.env is preferred in Gen 2
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || "YOUR_KEY_ID",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "YOUR_KEY_SECRET",
-});
+// Initialize Razorpay Lazy
+const getRazorpay = () => {
+    return new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID || "YOUR_KEY_ID",
+        key_secret: process.env.RAZORPAY_KEY_SECRET || "YOUR_KEY_SECRET",
+    });
+};
 
 /**
  * 1. Create Purchase (Callable - Gen 2)
@@ -58,6 +59,7 @@ export const createPurchase = onCall({ cors: true }, async (request) => {
             payment_capture: 1
         };
 
+        const razorpay = getRazorpay();
         const rzpOrder = await razorpay.orders.create(options);
 
         return {
